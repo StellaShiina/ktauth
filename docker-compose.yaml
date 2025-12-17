@@ -1,0 +1,25 @@
+services:
+  mysql:
+    container_name: ktauth-db
+    image: mysql:latest
+    ports:
+      - "127.0.0.1:3306:3306"
+    volumes:
+      - mysql:/var/lib/mysql
+      - ./init:/docker-entrypoint-initdb.d
+    environment:
+      - TZ=Asia/Shanghai
+      - MYSQL_DATABASE=ktauth
+      - MYSQL_ROOT_PASSWORD=ktauth-admin
+      - MYSQL_USER=ktauth
+      - MYSQL_PASSWORD=ktauth
+    restart: always
+  redis:
+    container_name: ktauth-redis
+    image: redis:latest
+    ports:
+      - "127.0.0.1:6379:6379"
+    restart: always
+
+volumes:
+  mysql:
