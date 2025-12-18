@@ -31,22 +31,22 @@ func (s *IPAccessService) VerifyWhileList(c context.Context, ipStr string) (bool
 
 	ipStr, err := iputils.IPv6ToCIDR64String(ip)
 
-	// check cached whitelist
-	valid, err := s.ipCache.Check(c, model.IPWhiteList, ipStr)
-	if err != nil {
-		slog.Error("Fail to access cached whitelist")
-	} else if valid {
-		return true, nil
+	ruleStr, err := s.ipCache.Get(c, ipStr)
+
+	if err != nil && err.Error() != "Cache not found" {
+		slog.Error("Redis error, fail to access cached rules")
+	} else if err == nil {
+		slog.Debug("Cached rule")
+		rule_type := model.IPRuleType(ruleStr)
+		switch rule_type {
+		case model.IPWhiteList:
+			return true, nil
+		default:
+			return false, nil
+		}
 	}
 
-	// check cached greylist
-	valid, err = s.ipCache.Check(c, model.IPGreyList, ipStr)
-	if err != nil {
-		slog.Error("Fail to access cached greylist")
-	} else if valid {
-		return false, nil
-	}
-
+	slog.Debug("Not cached rule")
 	whiteList, err := s.ipRepo.GetIPsByType(c, model.IPWhiteList)
 	if err != nil {
 		return false, fmt.Errorf("Error when getting whitelist: %v", err)

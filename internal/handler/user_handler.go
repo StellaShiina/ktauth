@@ -52,6 +52,10 @@ func (h *UserHandler) RequireCode(c *gin.Context) {
 	}
 	err = h.accountService.RequireCode(c.Request.Context(), json.Email, ip)
 	if err != nil {
+		if err.Error() == "Rate limit exceeded" {
+			c.String(http.StatusTooManyRequests, "Rate limit exceeded")
+			return
+		}
 		c.String(http.StatusInternalServerError, err.Error())
 		return
 	}

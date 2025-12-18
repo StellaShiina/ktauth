@@ -24,23 +24,24 @@ func NewIPCache(rdb *redis.Client) *IPCache {
 }
 
 func (r *IPCache) Cache(c context.Context, rule_type model.IPRuleType, ips ...string) error {
-	keyPrefix := fmt.Sprintf("%s:ip:", string(rule_type))
+	keyPrefix := "rule:ip:"
 	pipe := r.rdb.Pipeline()
 	for _, ip := range ips {
-		pipe.Set(c, keyPrefix+ip, "", ttl[rule_type])
+		pipe.Set(c, keyPrefix+ip, string(rule_type), ttl[rule_type])
 	}
 	_, err := pipe.Exec(c)
 	return err
 }
 
-func (r *IPCache) Check(c context.Context, rule_type model.IPRuleType, ip string) (bool, error) {
-	keyPrefix := fmt.Sprintf("%s:ip:", string(rule_type))
-	_, err := r.rdb.Get(c, keyPrefix+ip).Result()
+// return ruletype(string) or "", err"Cache not found" or "", err
+func (r *IPCache) Get(c context.Context, ip string) (string, error) {
+	keyPrefix := "rule:ip:"
+	ruleStr, err := r.rdb.Get(c, keyPrefix+ip).Result()
 	if err == redis.Nil {
-		return false, nil
+		return "", fmt.Errorf("Cache not found")
 	}
 	if err != nil {
-		return false, err
+		return "", err
 	}
-	return true, nil
+	return ruleStr, nil
 }
