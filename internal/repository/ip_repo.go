@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log/slog"
 
 	"github.com/StellaShiina/ktauth/internal/model"
 )
@@ -16,33 +17,46 @@ func NewIPRepo(db *sql.DB) *IPRepo {
 	return &IPRepo{db: db}
 }
 
-func (r *IPRepo) AddIP(ctx context.Context, cidr string, rule_type model.IPRuleType) (int64, error) {
-	result, err := r.db.ExecContext(ctx, "INSERT INTO ip (cidr, rule_type) VALUES (?, ?)", cidr, rule_type)
+func (r *IPRepo) AddIP(ctx context.Context, version model.IPVersion, ip_bin []byte, rule_type model.IPRuleType) error {
+	result, err := r.db.ExecContext(ctx, "INSERT INTO ip (version, ip_bin, rule_type) VALUES (?, ?, ?)", version, ip_bin, rule_type)
 	if err != nil {
-		return 0, fmt.Errorf("AddIP: %v", err)
+		slog.Error("IPRepo AddIP: " + err.Error())
+		return fmt.Errorf("IPRepo AddIP: %v", err)
 	}
-	id, err := result.LastInsertId()
+	_, err = result.LastInsertId()
 	if err != nil {
-		return 0, fmt.Errorf("AddIP: %v", err)
+		slog.Error("IPRepo AddIP: " + err.Error())
+		return fmt.Errorf("IPRepo AddIP: %v", err)
 	}
-	return id, nil
-}
-
-func (r *IPRepo) DelIP(ctx context.Context, cidr string) error {
-	_, err := r.db.ExecContext(ctx, "DELETE FROM ip WHERE cidr = ?", cidr)
-	if err != nil {
-		return err
-	}
+	slog.Debug("IPRepo AddIP success")
 	return nil
 }
 
-func (r *IPRepo) QueryIP(ctx context.Context, cidr string) (model.IPRuleType, error) {
+func (r *IPRepo) DelIP(ctx context.Context, version model.IPVersion, ip_bin []byte) error {
+	res, err := r.db.ExecContext(ctx, "DELETE FROM ip WHERE version = ? AND ip_bin = ?", version, ip_bin)
+	if err != nil {
+		slog.Error("IPRepo DelIP: " + err.Error())
+		return err
+	}
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		slog.Error("IPRepo DelIP: " + err.Error())
+		return err
+	}
+	if rowsAffected == 0 {
+		return fmt.Errorf("No such row!")
+	}
+	slog.Debug("IPRepo DelIP success")
+	return nil
+}
+
+func (r *IPRepo) QueryIP(ctx context.Context, version model.IPVersion, ip_bin []byte) (model.IPRuleType, error) {
 	var rule_type model.IPRuleType
 
-	row := r.db.QueryRowContext(ctx, "SELECT rule_type FROM ip WHERE cidr = ?", cidr)
+	row := r.db.QueryRowContext(ctx, "SELECT rule_type FROM ip WHERE version = ? AND ip_bin = ?", version, ip_bin)
 	if err := row.Scan(&rule_type); err != nil {
 		if err == sql.ErrNoRows {
-			return "", fmt.Errorf("No such IP: %s", cidr)
+			return "", fmt.Errorf("No such IP")
 		}
 		return "", fmt.Errorf("Error when scanning: %v", err)
 	}
@@ -52,46 +66,25 @@ func (r *IPRepo) QueryIP(ctx context.Context, cidr string) (model.IPRuleType, er
 func (r *IPRepo) GetIPs(ctx context.Context) ([]model.IP, error) {
 	var ips []model.IP
 
-	rows, err := r.db.QueryContext(ctx, "SELECT cidr, rule_type FROM ip;")
+	rows, err := r.db.QueryContext(ctx, "SELECT * FROM ip;")
 
 	if err != nil {
+		slog.Error("GetIPs error: " + err.Error())
 		return nil, fmt.Errorf("GetIPs error %v", err)
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var ip model.IP
 		// if err := rows.Scan(&ip.ID, &ip.CIDR, &ip.RuleType, &ip.Note, &ip.CreateAt, &ip.UpdateAt); err != nil {
-		if err := rows.Scan(&ip.CIDR, &ip.RuleType); err != nil {
+		if err := rows.Scan(&ip.ID, &ip.Version, &ip.IP_bin, &ip.RuleType, &ip.CreateAt, &ip.UpdateAt, &ip.Note); err != nil {
+			slog.Error("GetIPs error: " + err.Error())
 			return nil, fmt.Errorf("GetIPs error %v", err)
 		}
 		ips = append(ips, ip)
 	}
 	if err := rows.Err(); err != nil {
+		slog.Error("GetIPs error: " + err.Error())
 		return nil, fmt.Errorf("GetIPs error %v", err)
-	}
-	return ips, nil
-}
-
-func (r *IPRepo) GetIPsByType(ctx context.Context, rule_type model.IPRuleType) ([]string, error) {
-	var ips []string
-
-	rows, err := r.db.QueryContext(ctx, "SELECT cidr FROM ip WHERE rule_type = ?", rule_type)
-
-	if err != nil {
-		return nil, fmt.Errorf("Query error: %v", err)
-	}
-
-	defer rows.Close()
-
-	for rows.Next() {
-		var ip string
-		if err := rows.Scan(&ip); err != nil {
-			return nil, fmt.Errorf("Scan error: %v", err)
-		}
-		ips = append(ips, ip)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("Rows error: %v", err)
 	}
 	return ips, nil
 }

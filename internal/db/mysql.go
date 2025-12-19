@@ -17,15 +17,25 @@ type Config struct {
 	Loc       time.Location
 }
 
-func NewMySQL(c Config) (*sql.DB, error) {
+var config = Config{
+	User:      "ktauth",
+	Passwd:    "ktauth",
+	Net:       "tcp",
+	Addr:      "127.0.0.1",
+	DBName:    "ktauth",
+	ParseTime: true,
+	Loc:       *time.Local,
+}
+
+func NewMySQL() (*sql.DB, error) {
 	cfg := mysql.NewConfig()
-	cfg.User = c.User
-	cfg.Passwd = c.Passwd
-	cfg.Net = c.Net
-	cfg.Addr = c.Addr
-	cfg.DBName = c.DBName
-	cfg.ParseTime = c.ParseTime
-	cfg.Loc = &c.Loc
+	cfg.User = config.User
+	cfg.Passwd = config.Passwd
+	cfg.Net = config.Net
+	cfg.Addr = config.Addr
+	cfg.DBName = config.DBName
+	cfg.ParseTime = config.ParseTime
+	cfg.Loc = &config.Loc
 
 	db, err := sql.Open("mysql", cfg.FormatDSN())
 	if err != nil {

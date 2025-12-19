@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"log"
 	"log/slog"
+	"net/http"
 	"os"
-	"time"
 
 	"github.com/StellaShiina/ktauth/internal/db"
 	"github.com/StellaShiina/ktauth/internal/handler"
@@ -26,17 +26,7 @@ func main() {
 	)
 	slog.SetDefault(logger)
 
-	config := db.Config{
-		User:      "ktauth",
-		Passwd:    "ktauth",
-		Net:       "tcp",
-		Addr:      "127.0.0.1",
-		DBName:    "ktauth",
-		ParseTime: true,
-		Loc:       *time.Local,
-	}
-
-	mysql, err := db.NewMySQL(config)
+	mysql, err := db.NewMySQL()
 	if err != nil {
 		log.Fatal(err)
 	} else {
@@ -84,11 +74,18 @@ func main() {
 
 	r := gin.Default()
 
-	r.Use(checkIPMiddleware.VerifyWhileList())
+	// Kantan route
+	// Allow non-blacklist access, set ratelimit to greylist
+	r.GET("/kt/0", checkIPMiddleware.DenyBlackList(), rateLimitMiddleware.RateLimit(), func(ctx *gin.Context) { ctx.Status(http.StatusNoContent) })
+	// Only allow whitelist
+	r.GET("/kt/1", checkIPMiddleware.DenyBlackList(), checkIPMiddleware.WhiteListOnly(), func(ctx *gin.Context) { ctx.Status(http.StatusNoContent) })
+
+	// common route
+	r.Use(checkIPMiddleware.DenyBlackList())
 
 	router.RegisterTokenRouter(r, tokenHandler, checkIPMiddleware)
 	router.RegisterUserRouter(r, userHandler, authMiddleWare, rateLimitMiddleware)
 	router.RegisterIPRouter(r, ipRuleHandler, checkIPMiddleware)
 
-	r.Run(":10000")
+	r.Run("127.0.0.1:10000")
 }

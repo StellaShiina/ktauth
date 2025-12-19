@@ -14,7 +14,7 @@ func RegisterUserRouter(r *gin.Engine, h *handler.UserHandler, m *middleware.Aut
 	r.POST("/api/user/code", rm.RateLimit(), h.RequireCode)
 	user := r.Group("/api/user", m.VerifySession())
 	{
-		user.GET("/auth", func(ctx *gin.Context) { ctx.String(http.StatusOK, "You've already logged in!") })
+		user.GET("/auth", func(ctx *gin.Context) { ctx.Status(http.StatusNoContent) })
 		user.GET("/logout", h.LogoutUser)
 	}
 }

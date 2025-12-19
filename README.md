@@ -6,7 +6,7 @@
 
 The name "KTAUTH" is derived from "Kantan Auth" (Japanese: 簡単), meaning "Simple Auth".
 
-## Tech Stack
+## 🚀 Tech Stack
 
 - **Language:** [Go 1.25+](https://go.dev/)
 - **Web Framework:** [Gin](https://github.com/gin-gonic/gin)
@@ -16,27 +16,37 @@ The name "KTAUTH" is derived from "Kantan Auth" (Japanese: 簡単), meaning "Sim
 - **Email Service:** [Resend](https://resend.com/)
 - **Containerization:** Docker & Docker Compose
 
-## Key Features
+## ✨ Key Features
 
-### Secure Authentication
+### ⚡ Simple & Fast
+- **Caddy Ready:** Returns `204` on success, compatible with Caddy `forward_auth`.
+- **Flexible Endpoints:**
+  - `GET /kt/0`: Rate limits blacklist/greylist, allows whitelist.
+  - `GET /kt/1`: Whitelist access only.
+
+### 🔐 Secure Authentication
 - **JWT Implementation:** Stateless authentication using JSON Web Tokens for secure API access.
 - **Session Management:** Robust session handling backed by Redis.
 - **Email Verification:** Integrated email verification flow using Resend for user registration.
 - **Password Security:** Secure password hashing using `bcrypt`.
 
-### Access Control & Security
+### 🛡️ Access Control & Security
 - **IP Access Management:**
   - **Whitelist/Blacklist:** Flexible IP rule management to allow or deny traffic from specific sources.
-  - **CIDR Support:** Supports processing of IP ranges.
+  - **Matching Rules:** Based on single IPv4 and IPv6/64 subnets. Designed for high performance, keeping complex firewall-level filtering separate.
 - **Advanced Rate Limiting:**
-  - Implements a **Sliding Window Algorithm** using Redis Lua scripts and Sorted Sets (ZSET).
+  - Implements a **Millisecond-level Sliding Window Algorithm** using Redis Lua scripts and Sorted Sets (ZSET).
   - Provides precise traffic control (default: 60 requests/minute) to prevent abuse and DDoS attacks.
 
-### Clean Architecture
+### 🚀 Performance Optimization
+- **MySQL Storage:** Unified `BINARY(16)` type with `version+IP` indexing.
+- **Redis Caching:** IP rules are cached with adjustable TTL (Default: Blacklist 1h, Whitelist 30min, Greylist 5min).
+
+### 🏗️ Clean Architecture
 - Follows a structured **Layered Architecture** (Handler -> Service -> Repository -> DB).
 - Separation of concerns ensures maintainability and testability.
 
-## Getting Started
+## 🛠️ Getting Started
 
 ### Prerequisites
 
@@ -52,17 +62,17 @@ The name "KTAUTH" is derived from "Kantan Auth" (Japanese: 簡単), meaning "Sim
    ```
 
 2. **Setup Environment:**
-   Ensure you have the necessary environment configuration files (`resend.env`, `sendgrid.env`) if you plan to use email services.
-   *(Note: Database credentials are currently configured in `cmd/ktauth/main.go`. For production, please externalize these configurations.)*
+   Ensure you have the necessary environment variables (e.g., `RESEND_API_TOKEN`, `SENDGRID_API_TOKEN`) if you plan to use email services.
+   *(Note: Database credentials are currently configured in `internal/db/mysql.go`. For production, please externalize these configurations.)*
 
-### Running the Application
+### 🚀 Running the Application
 
 #### Using Docker Compose (Recommended)
 
 Start the MySQL and Redis dependencies:
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 This will spin up:
@@ -74,13 +84,13 @@ This will spin up:
 Once the dependencies are up, you can run the application:
 
 ```bash
-go mod download
+go mod tidy
 go run cmd/ktauth/main.go
 ```
 
 The server will start on port `10000`.
 
-## Project Structure
+## 📂 Project Structure
 
 ```
 ktauth/

@@ -18,18 +18,22 @@ func NewAdminIPRuleService(ipRepo *repository.IPRepo) *AdminIPRuleService {
 
 // Return cidr string, err error
 func (s *AdminIPRuleService) AddRule(c context.Context, ipStr string, rule_type model.IPRuleType) (string, error) {
-	cidr, err := iputils.ProcessIPToCIDR(ipStr)
+	version, ip, err := iputils.ProcessIP(ipStr)
 	if err != nil {
 		return "", err
 	}
-	_, err = s.ipRepo.AddIP(c, cidr, rule_type)
-	return cidr, err
+	err = s.ipRepo.AddIP(c, version, ip, rule_type)
+	return ip.String(), err
 }
 
 func (s *AdminIPRuleService) ListRules(c context.Context) ([]model.IP, error) {
 	return s.ipRepo.GetIPs(c)
 }
 
-func (s *AdminIPRuleService) DelRule(c context.Context, cidr string) error {
-	return s.ipRepo.DelIP(c, cidr)
+func (s *AdminIPRuleService) DelRule(c context.Context, ipStr string) error {
+	version, ip, err := iputils.ProcessIP(ipStr)
+	if err != nil {
+		return err
+	}
+	return s.ipRepo.DelIP(c, version, ip)
 }

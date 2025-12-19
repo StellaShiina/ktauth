@@ -10,11 +10,20 @@ const (
 	IPGreyList  IPRuleType = "greylist"
 )
 
+type IPVersion string
+
+const (
+	V4 IPVersion = "4"
+	V6 IPVersion = "6"
+)
+
 type IP struct {
 	ID       int64
-	CIDR     string
+	Version  IPVersion
+	IP_bin   []byte
 	RuleType IPRuleType
-	Note     *string
 	CreateAt time.Time
 	UpdateAt time.Time
+	Note     *string
+	IP_str   string
 }

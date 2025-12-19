@@ -45,12 +45,12 @@ func (h *UserHandler) RequireCode(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	ip, err := iputils.ProcessIPToCIDR(c.ClientIP())
+	_, ip, err := iputils.ProcessIP(c.ClientIP())
 	if err != nil {
 		c.String(http.StatusInternalServerError, err.Error())
 		return
 	}
-	err = h.accountService.RequireCode(c.Request.Context(), json.Email, ip)
+	err = h.accountService.RequireCode(c.Request.Context(), json.Email, ip.String())
 	if err != nil {
 		if err.Error() == "Rate limit exceeded" {
 			c.String(http.StatusTooManyRequests, "Rate limit exceeded")

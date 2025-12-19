@@ -11,10 +11,12 @@ CREATE TABLE
 CREATE TABLE
     ip (
         id BIGINT AUTO_INCREMENT PRIMARY KEY,
-        cidr VARCHAR(43) NOT NULL UNIQUE,
+        -- IPv4 OR IPv6/64 CIDR
+        version ENUM('4', '6') NOT NULL,
+        ip_bin BINARY(16) NOT NULL UNIQUE,
         rule_type ENUM ('whitelist', 'blacklist') NOT NULL,
-        note VARCHAR(255),
         create_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         update_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        INDEX idx_rule_type (rule_type)
+        note VARCHAR(255),
+        INDEX idx_rule_version (version, ip_bin)
     );

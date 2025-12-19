@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"log/slog"
-	"net"
 	"net/http"
 
 	"github.com/StellaShiina/ktauth/internal/service/access"
@@ -25,18 +24,14 @@ func (m *RateLimitMiddleware) RateLimit() gin.HandlerFunc {
 			c.Next()
 			return
 		}
-		ip := net.ParseIP(c.ClientIP())
-		if ip == nil {
-			c.AbortWithStatus(http.StatusInternalServerError)
-			return
-		}
-		postIPStr, err := iputils.IPv6ToCIDR64String(ip)
+		// postIPStr, err := iputils.IPv6ToCIDR64String(ip)
+		_, ip, err := iputils.ProcessIP(c.ClientIP())
 		if err != nil {
 			c.AbortWithStatus(http.StatusInternalServerError)
 			slog.Error(err.Error())
 			return
 		}
-		allow, err := m.rateLimitService.Allow(c.Request.Context(), postIPStr)
+		allow, err := m.rateLimitService.Allow(c.Request.Context(), ip.String())
 		if err != nil {
 			c.AbortWithStatus(http.StatusInternalServerError)
 			slog.Error(err.Error())

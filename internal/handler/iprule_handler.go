@@ -2,6 +2,7 @@ package handler
 
 import (
 	"errors"
+	"net"
 	"net/http"
 
 	"github.com/StellaShiina/ktauth/internal/model"
@@ -9,6 +10,8 @@ import (
 	"github.com/StellaShiina/ktauth/pkg/iputils"
 	"github.com/gin-gonic/gin"
 )
+
+var ipe *iputils.IPError
 
 type rule struct {
 	IP string `json:"ip"`
@@ -40,7 +43,6 @@ func (h *IPRuleHandler) AddRule(c *gin.Context) {
 	cidr, err := h.adminIPRuleService.AddRule(c.Request.Context(), json.IP, rule_type)
 
 	if err != nil {
-		var ipe *iputils.IPError
 		if errors.As(err, &ipe) {
 			c.String(http.StatusBadRequest, err.Error())
 			return
@@ -59,6 +61,9 @@ func (h *IPRuleHandler) ListRules(c *gin.Context) {
 		c.String(http.StatusInternalServerError, "Server error...")
 		return
 	}
+	for i := range rules {
+		rules[i].IP_str = net.IP(rules[i].IP_bin).String()
+	}
 	c.JSON(http.StatusOK, gin.H{"rules": rules})
 }
 
@@ -70,6 +75,10 @@ func (h *IPRuleHandler) DelRule(c *gin.Context) {
 	}
 	err := h.adminIPRuleService.DelRule(c.Request.Context(), json.IP)
 	if err != nil {
+		if errors.As(err, &ipe) {
+			c.String(http.StatusBadRequest, err.Error())
+			return
+		}
 		c.String(http.StatusInternalServerError, err.Error())
 		return
 	}

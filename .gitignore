@@ -4,3 +4,4 @@ init/*
 ktauth
 !cmd/ktauth
 *.env
+*.log
