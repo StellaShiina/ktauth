@@ -1,0 +1,12 @@
+docker-compose.*
+init
+*.env
+*.exe
+*.log
+
+.git
+.github
+.gitignore
+
+ktauth
+!cmd/ktauth

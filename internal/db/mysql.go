@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"os"
 	"time"
 
 	"github.com/go-sql-driver/mysql"
@@ -28,6 +29,10 @@ var config = Config{
 }
 
 func NewMySQL() (*sql.DB, error) {
+	envHost := os.Getenv("MYSQL_HOST")
+	if envHost != "" {
+		config.Addr = envHost
+	}
 	cfg := mysql.NewConfig()
 	cfg.User = config.User
 	cfg.Passwd = config.Passwd

@@ -26,14 +26,6 @@ func main() {
 	)
 	slog.SetDefault(logger)
 
-	mysql, err := db.NewMySQL()
-	if err != nil {
-		log.Fatal(err)
-	} else {
-		fmt.Println("Connected to mysql!")
-	}
-	defer mysql.Close()
-
 	redis, err := db.NewRedis()
 
 	if err != nil {
@@ -42,6 +34,14 @@ func main() {
 		fmt.Println("Connected to redis!")
 	}
 	defer redis.Close()
+
+	mysql, err := db.NewMySQL()
+	if err != nil {
+		log.Fatal(err)
+	} else {
+		fmt.Println("Connected to mysql!")
+	}
+	defer mysql.Close()
 
 	// init repos
 	ipRepo := repository.NewIPRepo(mysql)
@@ -87,5 +87,5 @@ func main() {
 	router.RegisterUserRouter(r, userHandler, authMiddleWare, rateLimitMiddleware)
 	router.RegisterIPRouter(r, ipRuleHandler, checkIPMiddleware)
 
-	r.Run("127.0.0.1:10000")
+	r.Run(":10000")
 }
