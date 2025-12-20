@@ -15,6 +15,7 @@ The name "KTAUTH" is derived from "Kantan Auth" (Japanese: 簡単), meaning "Sim
 - **Authentication:** [JWT (JSON Web Tokens)](https://jwt.io/)
 - **Email Service:** [Resend](https://resend.com/)
 - **Containerization:** Docker & Docker Compose
+- **Test:** Github Action + Go Testing
 
 ## ✨ Key Features
 
@@ -23,6 +24,9 @@ The name "KTAUTH" is derived from "Kantan Auth" (Japanese: 簡単), meaning "Sim
 - **Flexible Endpoints:**
   - `GET /kt/0`: Rate limits blacklist/greylist, allows whitelist.
   - `GET /kt/1`: Whitelist access only.
+- **One-Command Deployment:** Support Docker Compose one-click deployment.(Please configure `resend.env`)
+- `docker compose -f ./docker-compose.yaml -f ./docker-compose.ktauth.yaml up -d`
+- **ktauth image:** [stellashiina/ktauth](https://hub.docker.com/r/stellashiina/ktauth)
 
 ### 🔐 Secure Authentication
 - **JWT Implementation:** Stateless authentication using JSON Web Tokens for secure API access.
@@ -48,12 +52,31 @@ The name "KTAUTH" is derived from "Kantan Auth" (Japanese: 簡単), meaning "Sim
 
 ## 🛠️ Getting Started
 
-### Prerequisites
+> [!IMPORTANT]
+> Gin is configured with `TrustedProxies` set to trust all internal networks. Please adjust this setting if necessary.
+>
+> It is recommended to deploy with TLS, preferably using Caddy.
 
+> [!TIP]
+> Two deployment methods are supported:
+
+### Method 1: Docker Compose (Recommended)
+
+**Prerequisites**
+- [Docker](https://www.docker.com/) & [Docker Compose](https://docs.docker.com/compose/)
+
+**Start**
+```bash
+docker compose -f ./docker-compose.yaml -f ./docker-compose.ktauth.yaml up -d
+```
+
+### Method 2: Local Go + Docker Compose
+
+**Prerequisites**
 - [Go](https://go.dev/dl/) (version 1.25 or later)
 - [Docker](https://www.docker.com/) & [Docker Compose](https://docs.docker.com/compose/)
 
-### Installation
+**Installation**
 
 1. **Clone the repository:**
    ```bash
@@ -65,21 +88,17 @@ The name "KTAUTH" is derived from "Kantan Auth" (Japanese: 簡単), meaning "Sim
    Ensure you have the necessary environment variables (e.g., `RESEND_API_TOKEN`, `SENDGRID_API_TOKEN`) if you plan to use email services.
    *(Note: Database credentials are currently configured in `internal/db/mysql.go`. For production, please externalize these configurations.)*
 
-### 🚀 Running the Application
-
-#### Using Docker Compose (Recommended)
+**Running the Application**
 
 Start the MySQL and Redis dependencies:
 
 ```bash
-docker compose up -d
+docker compose -f ./docker-compose.yaml -f ./docker-compose.host.yaml up -d
 ```
 
 This will spin up:
 - **MySQL** on port `3306` (Pre-configured with `ktauth` database and user)
 - **Redis** on port `6379`
-
-#### Running Locally
 
 Once the dependencies are up, you can run the application:
 

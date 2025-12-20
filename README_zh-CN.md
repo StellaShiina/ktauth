@@ -15,6 +15,7 @@
 - **认证方式:** [JWT (JSON Web Tokens)](https://jwt.io/)
 - **邮件服务:** [Resend](https://resend.com/)
 - **容器化:** Docker & Docker Compose
+- **测试:** Github action + Go Testing
 
 ## ✨ 核心特性 (Key Features)
 
@@ -22,6 +23,10 @@
 认证通过返回204，caddy可以直接利用forward_auth对接
 - `GET /kt/0` 对黑名单限速，灰名单限流，白名单放行
 - `GET /kt/1` 仅限白名单
+
+支持容器一键部署，安装好docker compose后一行指令完成部署（请配置`resend.env`）
+- `docker compose -f ./docker-compose.yaml -f ./docker-compose.ktauth.yaml up -d`
+- **ktauth image:** [stellashiina/ktauth](https://hub.docker.com/r/stellashiina/ktauth)
 
 ### 🔐 安全认证
 - **JWT 实现:** 使用 JSON Web Tokens 进行无状态认证，确保 API 访问安全。
@@ -47,8 +52,25 @@
 
 ## 🛠️ 快速开始 (Getting Started)
 
-### 前置要求
+> [!IMPORTANT]
+> Gin内设置了TrustedProxies为全内网信任，有需要请更改相关设置
+>
+> 请结合前置TLS部署，推荐结合caddy部署
 
+> [!TIP]
+> 这里支持两种部署方式：
+
+### 方法一：docker compose启动所有服务（推荐）
+前置要求
+- [Docker](https://www.docker.com/) & [Docker Compose](https://docs.docker.com/compose/)
+
+启动
+```bash
+docker compose -f ./docker-compose.yaml -f ./docker-compose.ktauth.yaml up -d
+```
+
+### 方法二：本地go+docker compose启动
+前置要求
 - [Go](https://go.dev/dl/) (版本 1.25 或更高)
 - [Docker](https://www.docker.com/) & [Docker Compose](https://docs.docker.com/compose/)
 
@@ -71,7 +93,7 @@
 启动 MySQL 和 Redis 依赖服务：
 
 ```bash
-docker compose up -d
+docker compose -f ./docker-compose.yaml -f ./docker-compose.host.yaml up -d
 ```
 
 这将启动：

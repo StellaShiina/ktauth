@@ -20,3 +20,10 @@ CREATE TABLE
         note VARCHAR(255),
         INDEX idx_rule_version (version, ip_bin)
     );
+
+USE ktauth;
+
+INSERT INTO
+    ip (version, ip_bin, rule_type)
+VALUES
+    ("4", UNHEX("00000000000000000000FFFF7F000001"), "whitelist");

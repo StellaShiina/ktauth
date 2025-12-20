@@ -1,16 +1,17 @@
 services:
   ktauth:
     container_name: ktauth
-    image: stellashiina/ktauth:0.0.1
+    image: stellashiina/ktauth:v0-alpine3.23
     ports:
-      - "10000:10000"
+      - "127.0.0.1:10000:10000"
     depends_on:
       redis:
         condition: service_healthy
       mysql:
         condition: service_healthy
+    env_file:
+      - resend.env
     environment:
       - REDIS_HOST=redis
       - MYSQL_HOST=mysql
       - GIN_MODE=release
-      - RESENT_API_KEY=${RESENT_API_KEY}

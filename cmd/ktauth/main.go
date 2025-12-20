@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"log/slog"
 	"net/http"
@@ -21,7 +20,7 @@ import (
 func main() {
 	logger := slog.New(
 		slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-			Level: slog.LevelDebug,
+			Level: slog.LevelError,
 		}),
 	)
 	slog.SetDefault(logger)
@@ -31,7 +30,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	} else {
-		fmt.Println("Connected to redis!")
+		slog.Info("Connected to redis!")
 	}
 	defer redis.Close()
 
@@ -39,7 +38,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	} else {
-		fmt.Println("Connected to mysql!")
+		slog.Info("Connected to mysql!")
 	}
 	defer mysql.Close()
 
@@ -73,6 +72,8 @@ func main() {
 	rateLimitMiddleware := middleware.NewRateLimitMiddleware(rateLimitService)
 
 	r := gin.Default()
+
+	r.SetTrustedProxies([]string{"127.0.0.0/8", "::1/128", "172.16.0.0/12", "192.168.0.0/16", "10.0.0.0/8"})
 
 	// Kantan route
 	// Allow non-blacklist access, set ratelimit to greylist
