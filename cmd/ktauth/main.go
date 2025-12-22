@@ -75,14 +75,14 @@ func main() {
 
 	r.SetTrustedProxies([]string{"127.0.0.0/8", "::1/128", "172.16.0.0/12", "192.168.0.0/16", "10.0.0.0/8"})
 
-	// Kantan route
-	// Allow non-blacklist access, set ratelimit to greylist
-	r.GET("/kt/0", checkIPMiddleware.DenyBlackList(), rateLimitMiddleware.RateLimit(), func(ctx *gin.Context) { ctx.Status(http.StatusNoContent) })
-	// Only allow whitelist
-	r.GET("/kt/1", checkIPMiddleware.DenyBlackList(), checkIPMiddleware.WhiteListOnly(), func(ctx *gin.Context) { ctx.Status(http.StatusNoContent) })
-
 	// common route
 	r.Use(checkIPMiddleware.DenyBlackList())
+
+	// Kantan route
+	// Allow non-blacklist access, set ratelimit to greylist
+	r.GET("/kt/0", rateLimitMiddleware.RateLimit(), func(ctx *gin.Context) { ctx.Status(http.StatusNoContent) })
+	// Only allow whitelist
+	r.GET("/kt/1", checkIPMiddleware.WhiteListOnly(), func(ctx *gin.Context) { ctx.Status(http.StatusNoContent) })
 
 	router.RegisterTokenRouter(r, tokenHandler, checkIPMiddleware)
 	router.RegisterUserRouter(r, userHandler, authMiddleWare, rateLimitMiddleware)

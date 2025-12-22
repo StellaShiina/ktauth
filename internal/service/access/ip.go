@@ -48,6 +48,7 @@ func (s *IPAccessService) QueryRule(c context.Context, ipStr string) (model.IPRu
 	case model.IPBlackList:
 		err = s.ipCache.Cache(c, rule_type, ip.String())
 	default:
+		rule_type = model.IPGreyList
 		err = s.ipCache.Cache(c, model.IPGreyList, ip.String())
 	}
 	if err != nil {
