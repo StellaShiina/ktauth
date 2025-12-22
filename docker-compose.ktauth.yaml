@@ -1,7 +1,7 @@
 services:
   ktauth:
     container_name: ktauth
-    image: stellashiina/ktauth:v0.1-alpine3.23
+    image: stellashiina/ktauth:latest
     ports:
       - "127.0.0.1:10000:10000"
     depends_on:
