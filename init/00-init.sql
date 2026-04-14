@@ -17,8 +17,7 @@ CREATE TABLE
         rule_type ENUM ('whitelist', 'blacklist') NOT NULL,
         create_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         update_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        note VARCHAR(255),
-        INDEX idx_rule_version (version, ip_bin)
+        note VARCHAR(255)
     );
 
 USE ktauth;

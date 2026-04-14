@@ -1,23 +1,9 @@
 services:
-  ktauth:
-    container_name: ktauth
-    image: stellashiina/ktauth:latest
-    ports:
-      - "10000:10000"
-    depends_on:
-      redis:
-        condition: service_healthy
-      mysql:
-        condition: service_healthy
-    env_file:
-      - resend.env
-    environment:
-      - REDIS_HOST=redis
-      - MYSQL_HOST=mysql
-      - GIN_MODE=release
   mysql:
     container_name: ktauth-db
     image: mysql:latest
+    ports:
+      - "127.0.0.1:3306:3306"
     volumes:
       - mysql:/var/lib/mysql
       - ./init:/docker-entrypoint-initdb.d
@@ -36,6 +22,8 @@ services:
   redis:
     container_name: ktauth-redis
     image: redis:latest
+    ports:
+      - "127.0.0.1:6379:6379"
     restart: always
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
