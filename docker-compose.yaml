@@ -10,7 +10,7 @@ services:
       mysql:
         condition: service_healthy
     env_file:
-      - resend.env
+      - .env
     environment:
       - REDIS_HOST=redis
       - MYSQL_HOST=mysql

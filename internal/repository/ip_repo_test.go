@@ -28,8 +28,8 @@ func TestIPRepo(t *testing.T) {
 	}
 
 	fmt.Println("Test AddIP")
-	cfdns := "2606:4700:4700::1111"
-	version, ip, err := iputils.ProcessIP(cfdns)
+	alidns := "2400:3200::1"
+	version, ip, err := iputils.ProcessIP(alidns)
 	if err != nil {
 		t.Fatal(err)
 	}

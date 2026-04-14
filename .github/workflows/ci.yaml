@@ -18,7 +18,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Start database
-        run: docker compose -f ./docker-compose.yaml -f ./docker-compose.db.yaml up -d
+        run: docker compose -f ./docker-compose.db.yaml up -d
         working-directory: .
       - name: Set up go
         uses: actions/setup-go@v3
