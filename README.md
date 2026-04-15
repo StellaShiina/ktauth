@@ -25,7 +25,7 @@ The name "KTAUTH" is derived from "Kantan Auth" (Japanese: 簡単), meaning "Sim
   - `GET /kt/0`: Rate limits blacklist/greylist, allows whitelist.
   - `GET /kt/1`: Whitelist access only.
 - **One-Command Deployment:** Support Docker Compose one-click deployment.(Please configure `resend.env`)
-- `docker compose -f ./docker-compose.yaml -f ./docker-compose.ktauth.yaml up -d`
+- `docker compose up -d`
 - **ktauth image:** [stellashiina/ktauth](https://hub.docker.com/r/stellashiina/ktauth)
 
 ### 🔐 Secure Authentication
@@ -67,7 +67,7 @@ The name "KTAUTH" is derived from "Kantan Auth" (Japanese: 簡単), meaning "Sim
 
 **Start**
 ```bash
-docker compose -f ./docker-compose.yaml -f ./docker-compose.ktauth.yaml up -d
+cp .env.example .env && docker compose up -d
 ```
 
 ### Method 2: Local Go + Docker Compose
@@ -93,7 +93,7 @@ docker compose -f ./docker-compose.yaml -f ./docker-compose.ktauth.yaml up -d
 Start the MySQL and Redis dependencies:
 
 ```bash
-docker compose -f ./docker-compose.yaml -f ./docker-compose.host.yaml up -d
+docker compose -f ./docker-compose.db.yaml up -d
 ```
 
 This will spin up:

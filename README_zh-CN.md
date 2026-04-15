@@ -25,7 +25,7 @@
 - `GET /kt/1` 仅限白名单
 
 支持容器一键部署，安装好docker compose后一行指令完成部署（请配置`resend.env`）
-- `docker compose -f ./docker-compose.yaml -f ./docker-compose.ktauth.yaml up -d`
+- `docker compose up -d`
 - **ktauth image:** [stellashiina/ktauth](https://hub.docker.com/r/stellashiina/ktauth)
 
 ### 🔐 安全认证
@@ -66,7 +66,7 @@
 
 启动
 ```bash
-docker compose -f ./docker-compose.yaml -f ./docker-compose.ktauth.yaml up -d
+cp .env.example .env && docker compose up -d
 ```
 
 ### 方法二：本地go+docker compose启动
@@ -84,7 +84,6 @@ docker compose -f ./docker-compose.yaml -f ./docker-compose.ktauth.yaml up -d
 
 2. **环境配置:**
    如果您计划使用邮件服务，请确保已配置必要的环境变量（如 `RESEND_API_TOKEN`, `SENDGRID_API_TOKEN`）。
-   *(注意: 数据库凭据当前在 `intervnal/db/mysql.go` 中配置。在生产环境中，请务必将其外部化配置。)*
 
 ### 🚀 运行应用
 
@@ -93,7 +92,7 @@ docker compose -f ./docker-compose.yaml -f ./docker-compose.ktauth.yaml up -d
 启动 MySQL 和 Redis 依赖服务：
 
 ```bash
-docker compose -f ./docker-compose.yaml -f ./docker-compose.host.yaml up -d
+docker compose -f ./docker-compose.db.yaml up -d
 ```
 
 这将启动：
