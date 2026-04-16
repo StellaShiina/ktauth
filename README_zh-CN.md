@@ -10,7 +10,7 @@
 
 - **开发语言:** [Go 1.25+](https://go.dev/)
 - **Web 框架:** [Gin](https://github.com/gin-gonic/gin)
-- **数据库:** [MySQL](https://www.mysql.com/)
+- **数据库:** [PostgreSQL](https://www.postgresql.org/)
 - **缓存 & 限流:** [Redis](https://redis.io/)
 - **认证方式:** [JWT (JSON Web Tokens)](https://jwt.io/)
 - **邮件服务:** [Resend](https://resend.com/)
@@ -43,7 +43,6 @@
   - 提供精准的流量控制（默认：60 请求/分钟），有效防止滥用和 DDoS 攻击。
 
 ### 🚀 性能优化
-- **MySQL储存规则:** 统一类型BINARY(16)，version+IP索引规则
 - **Redis缓存:** 缓存IP规则，可以按照需要调整黑白灰名单的缓存时间，默认黑名单1h缓存，白名单30min，灰名单5min。
 
 ### 🏗️ 清晰架构
@@ -57,10 +56,9 @@
 >
 > 请结合前置TLS部署，推荐结合caddy部署
 
-> [!TIP]
-> 这里支持两种部署方式：
 
-### 方法一：docker compose启动所有服务（推荐）
+### docker compose快速启动
+
 前置要求
 - [Docker](https://www.docker.com/) & [Docker Compose](https://docs.docker.com/compose/)
 
@@ -68,47 +66,6 @@
 ```bash
 cp .env.example .env && docker compose up -d
 ```
-
-### 方法二：本地go+docker compose启动
-前置要求
-- [Go](https://go.dev/dl/) (版本 1.25 或更高)
-- [Docker](https://www.docker.com/) & [Docker Compose](https://docs.docker.com/compose/)
-
-### 安装步骤
-
-1. **克隆仓库:**
-   ```bash
-   git clone https://github.com/StellaShiina/ktauth.git
-   cd ktauth
-   ```
-
-2. **环境配置:**
-   如果您计划使用邮件服务，请确保已配置必要的环境变量（如 `RESEND_API_TOKEN`, `SENDGRID_API_TOKEN`）。
-
-### 🚀 运行应用
-
-#### 使用 Docker Compose (推荐)
-
-启动 MySQL 和 Redis 依赖服务：
-
-```bash
-docker compose -f ./docker-compose.db.yaml up -d
-```
-
-这将启动：
-- **MySQL** 端口 `3306` (预配置了 `ktauth` 数据库和用户)
-- **Redis** 端口 `6379`
-
-#### 本地运行
-
-依赖服务启动后，您可以运行应用程序：
-
-```bash
-go mod tidy
-go run cmd/ktauth/main.go
-```
-
-服务器将在端口 `10000` 上启动。
 
 ## 📂 项目结构
 
@@ -118,7 +75,7 @@ ktauth/
 ├── init/               # 数据库初始化脚本
 ├── internal/
 │   ├── auth/           # 认证逻辑 (JWT)
-│   ├── db/             # 数据库连接 (MySQL, Redis)
+│   ├── db/             # 数据库连接 (PostgreSQL, Redis)
 │   ├── handler/        # HTTP 处理层 (Controllers)
 │   ├── middleware/     # Gin 中间件 (Auth, RateLimit, IP Check)
 │   ├── model/          # 数据模型

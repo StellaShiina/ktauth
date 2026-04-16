@@ -17,13 +17,13 @@ func NewAdminIPRuleService(ipRepo *repository.IPRepo) *AdminIPRuleService {
 }
 
 // Return cidr string, err error
-func (s *AdminIPRuleService) AddRule(c context.Context, ipStr string, rule_type model.IPRuleType) (string, error) {
-	version, ip, err := iputils.ProcessIP(ipStr)
+func (s *AdminIPRuleService) AddRule(c context.Context, ipStr string, isWhiteList bool) (string, error) {
+	version, _, ipNet, err := iputils.ProcessIP(ipStr)
 	if err != nil {
 		return "", err
 	}
-	err = s.ipRepo.AddIP(c, version, ip, rule_type)
-	return ip.String(), err
+	err = s.ipRepo.AddIP(c, version, ipNet, isWhiteList)
+	return ipNet.String(), err
 }
 
 func (s *AdminIPRuleService) ListRules(c context.Context) ([]model.IP, error) {
@@ -31,9 +31,9 @@ func (s *AdminIPRuleService) ListRules(c context.Context) ([]model.IP, error) {
 }
 
 func (s *AdminIPRuleService) DelRule(c context.Context, ipStr string) error {
-	version, ip, err := iputils.ProcessIP(ipStr)
+	version, _, ipNet, err := iputils.ProcessIP(ipStr)
 	if err != nil {
 		return err
 	}
-	return s.ipRepo.DelIP(c, version, ip)
+	return s.ipRepo.DelIP(c, version, ipNet)
 }

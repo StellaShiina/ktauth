@@ -2,10 +2,8 @@ package handler
 
 import (
 	"errors"
-	"net"
 	"net/http"
 
-	"github.com/StellaShiina/ktauth/internal/model"
 	"github.com/StellaShiina/ktauth/internal/service/admin"
 	"github.com/StellaShiina/ktauth/pkg/iputils"
 	"github.com/gin-gonic/gin"
@@ -32,15 +30,15 @@ func (h *IPRuleHandler) AddRule(c *gin.Context) {
 		return
 	}
 
-	var rule_type model.IPRuleType
+	var isWhiteList bool
 	isBan := c.Query("ban")
 	if isBan != "" {
-		rule_type = model.IPBlackList
+		isWhiteList = false
 	} else {
-		rule_type = model.IPWhiteList
+		isWhiteList = true
 	}
 
-	cidr, err := h.adminIPRuleService.AddRule(c.Request.Context(), json.IP, rule_type)
+	cidr, err := h.adminIPRuleService.AddRule(c.Request.Context(), json.IP, isWhiteList)
 
 	if err != nil {
 		if errors.As(err, &ipe) {
@@ -60,9 +58,6 @@ func (h *IPRuleHandler) ListRules(c *gin.Context) {
 	if err != nil {
 		c.String(http.StatusInternalServerError, "Server error...")
 		return
-	}
-	for i := range rules {
-		rules[i].IP_str = net.IP(rules[i].IP_bin).String()
 	}
 	c.JSON(http.StatusOK, gin.H{"rules": rules})
 }

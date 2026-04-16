@@ -24,14 +24,13 @@ func (m *RateLimitMiddleware) RateLimit() gin.HandlerFunc {
 			c.Next()
 			return
 		}
-		// postIPStr, err := iputils.IPv6ToCIDR64String(ip)
-		_, ip, err := iputils.ProcessIP(c.ClientIP())
+		_, _, ipNet, err := iputils.ProcessIP(c.ClientIP())
 		if err != nil {
 			c.AbortWithStatus(http.StatusInternalServerError)
 			slog.Error(err.Error())
 			return
 		}
-		allow, err := m.rateLimitService.Allow(c.Request.Context(), ip.String())
+		allow, err := m.rateLimitService.Allow(c.Request.Context(), ipNet.String())
 		if err != nil {
 			c.AbortWithStatus(http.StatusInternalServerError)
 			slog.Error(err.Error())

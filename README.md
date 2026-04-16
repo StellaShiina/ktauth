@@ -10,7 +10,7 @@ The name "KTAUTH" is derived from "Kantan Auth" (Japanese: 簡単), meaning "Sim
 
 - **Language:** [Go 1.25+](https://go.dev/)
 - **Web Framework:** [Gin](https://github.com/gin-gonic/gin)
-- **Database:** [MySQL](https://www.mysql.com/)
+- **Database:** [PostgreSQL](https://www.postgresql.org/)
 - **Cache & Rate Limiting:** [Redis](https://redis.io/)
 - **Authentication:** [JWT (JSON Web Tokens)](https://jwt.io/)
 - **Email Service:** [Resend](https://resend.com/)
@@ -43,7 +43,6 @@ The name "KTAUTH" is derived from "Kantan Auth" (Japanese: 簡単), meaning "Sim
   - Provides precise traffic control (default: 60 requests/minute) to prevent abuse and DDoS attacks.
 
 ### 🚀 Performance Optimization
-- **MySQL Storage:** Unified `BINARY(16)` type with `version+IP` indexing.
 - **Redis Caching:** IP rules are cached with adjustable TTL (Default: Blacklist 1h, Whitelist 30min, Greylist 5min).
 
 ### 🏗️ Clean Architecture
@@ -57,10 +56,8 @@ The name "KTAUTH" is derived from "Kantan Auth" (Japanese: 簡単), meaning "Sim
 >
 > It is recommended to deploy with TLS, preferably using Caddy.
 
-> [!TIP]
-> Two deployment methods are supported:
 
-### Method 1: Docker Compose (Recommended)
+### Docker Compose Quick Start
 
 **Prerequisites**
 - [Docker](https://www.docker.com/) & [Docker Compose](https://docs.docker.com/compose/)
@@ -69,45 +66,6 @@ The name "KTAUTH" is derived from "Kantan Auth" (Japanese: 簡単), meaning "Sim
 ```bash
 cp .env.example .env && docker compose up -d
 ```
-
-### Method 2: Local Go + Docker Compose
-
-**Prerequisites**
-- [Go](https://go.dev/dl/) (version 1.25 or later)
-- [Docker](https://www.docker.com/) & [Docker Compose](https://docs.docker.com/compose/)
-
-**Installation**
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/StellaShiina/ktauth.git
-   cd ktauth
-   ```
-
-2. **Setup Environment:**
-   Ensure you have the necessary environment variables (e.g., `RESEND_API_TOKEN`, `SENDGRID_API_TOKEN`) if you plan to use email services.
-   *(Note: Database credentials are currently configured in `internal/db/mysql.go`. For production, please externalize these configurations.)*
-
-**Running the Application**
-
-Start the MySQL and Redis dependencies:
-
-```bash
-docker compose -f ./docker-compose.db.yaml up -d
-```
-
-This will spin up:
-- **MySQL** on port `3306` (Pre-configured with `ktauth` database and user)
-- **Redis** on port `6379`
-
-Once the dependencies are up, you can run the application:
-
-```bash
-go mod tidy
-go run cmd/ktauth/main.go
-```
-
-The server will start on port `10000`.
 
 ## 📂 Project Structure
 

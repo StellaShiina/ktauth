@@ -3,7 +3,7 @@ name: CI
 on:
   push:
     branches:
-      - dev
+      - main
     paths-ignore:
       - README.md
       - README_zh-CN.md

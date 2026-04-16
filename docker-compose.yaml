@@ -4,45 +4,27 @@ services:
     image: stellashiina/ktauth:latest
     ports:
       - "10000:10000"
-    depends_on:
-      redis:
-        condition: service_healthy
-      mysql:
-        condition: service_healthy
     env_file:
       - .env
     environment:
       - REDIS_HOST=redis
-      - MYSQL_HOST=mysql
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
       - GIN_MODE=release
-  mysql:
+  postgres:
     container_name: ktauth-db
-    image: mysql:latest
+    image: postgres:latest
     volumes:
-      - mysql:/var/lib/mysql
+      - postgres_data:/var/lib/postgresql
       - ./init:/docker-entrypoint-initdb.d
     environment:
-      - MYSQL_DATABASE=ktauth
-      - MYSQL_ROOT_PASSWORD=ktauth-admin
-      - MYSQL_USER=ktauth
-      - MYSQL_PASSWORD=ktauth
+      - POSTGRES_DB=ktauth
+      - POSTGRES_PASSWORD=ktauth
+      - POSTGRES_USER=ktauth
     restart: always
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "ktauth", "-pktauth"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-      start_period: 10s
   redis:
     container_name: ktauth-redis
     image: redis:latest
     restart: always
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-      start_period: 5s
-
 volumes:
-  mysql:
+  postgres_data:

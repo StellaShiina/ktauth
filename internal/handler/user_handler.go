@@ -45,12 +45,12 @@ func (h *UserHandler) RequireCode(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	_, ip, err := iputils.ProcessIP(c.ClientIP())
+	_, _, ipNet, err := iputils.ProcessIP(c.ClientIP())
 	if err != nil {
 		c.String(http.StatusInternalServerError, err.Error())
 		return
 	}
-	err = h.accountService.RequireCode(c.Request.Context(), json.Email, ip.String())
+	err = h.accountService.RequireCode(c.Request.Context(), json.Email, ipNet.String())
 	if err != nil {
 		if err.Error() == "Rate limit exceeded" {
 			c.String(http.StatusTooManyRequests, "Rate limit exceeded")
@@ -126,14 +126,14 @@ func (h *UserHandler) LoginUser(c *gin.Context) {
 		return
 	}
 
-	tokenStr, jti, err := auth.SignToken(user.UUID.String, user.Name)
+	tokenStr, jti, err := auth.SignToken(user.UUID, user.Name)
 
 	if err != nil {
 		c.String(http.StatusInternalServerError, "Server error")
 		return
 	}
 
-	err = h.sessionService.CreateSession(c.Request.Context(), user.UUID.String, jti)
+	err = h.sessionService.CreateSession(c.Request.Context(), user.UUID, jti)
 
 	if err != nil {
 		c.String(http.StatusInternalServerError, "Server error")

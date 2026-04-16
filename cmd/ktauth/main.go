@@ -1,10 +1,13 @@
 package main
 
 import (
+	"context"
+	"fmt"
 	"log"
 	"log/slog"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/StellaShiina/ktauth/internal/db"
 	"github.com/StellaShiina/ktauth/internal/handler"
@@ -15,6 +18,7 @@ import (
 	"github.com/StellaShiina/ktauth/internal/service/admin"
 	"github.com/StellaShiina/ktauth/internal/service/identity"
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func main() {
@@ -34,17 +38,17 @@ func main() {
 	}
 	defer redis.Close()
 
-	mysql, err := db.NewMySQL()
+	postgres, err := connectPostgres(30 * time.Second)
 	if err != nil {
 		log.Fatal(err)
 	} else {
-		slog.Info("Connected to mysql!")
+		slog.Info("Connected to postgres!")
 	}
-	defer mysql.Close()
+	defer postgres.Close()
 
 	// init repos
-	ipRepo := repository.NewIPRepo(mysql)
-	userRepo := repository.NewUserRepo(mysql)
+	ipRepo := repository.NewIPRepo(postgres)
+	userRepo := repository.NewUserRepo(postgres)
 	tokenRepo := repository.NewTokenRepo(redis)
 	sessionRepo := repository.NewSessionRepo(redis)
 	ipCache := repository.NewIPCache(redis)
@@ -89,4 +93,34 @@ func main() {
 	router.RegisterIPRouter(r, ipRuleHandler, checkIPMiddleware)
 
 	r.Run(":10000")
+}
+
+func connectPostgres(timeout time.Duration) (*pgxpool.Pool, error) {
+	var pool *pgxpool.Pool
+	var err error
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	backoff := time.Second * 1
+
+	for {
+		slog.Info("Try to connect postgres...")
+		pool, err = db.NewPostgres()
+		if err == nil {
+			return pool, nil
+		}
+
+		slog.Warn("Failed to connect postgres, will retry", "error", err, "next_retry", backoff)
+
+		select {
+		case <-ctx.Done():
+			return nil, fmt.Errorf("Postgres connection timeout: %w", err)
+		case <-time.After(backoff):
+			backoff *= 2
+			if backoff > 8*time.Second {
+				backoff = 8 * time.Second
+			}
+		}
+	}
 }

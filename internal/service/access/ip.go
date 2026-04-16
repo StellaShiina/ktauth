@@ -21,7 +21,9 @@ func NewIPAccessService(r *repository.IPRepo, c *repository.IPCache) *IPAccessSe
 
 // Return rule_type, error
 func (s *IPAccessService) QueryRule(c context.Context, ipStr string) (model.IPRuleType, error) {
-	version, ip, err := iputils.ProcessIP(ipStr)
+	var rule_type model.IPRuleType
+
+	version, ip, _, err := iputils.ProcessIP(ipStr)
 
 	if err != nil {
 		return "", fmt.Errorf("Invalid IP")
@@ -36,20 +38,26 @@ func (s *IPAccessService) QueryRule(c context.Context, ipStr string) (model.IPRu
 		return model.IPRuleType(ruleStr), nil
 	}
 
-	rule_type, err := s.ipRepo.QueryIP(c, version, ip)
+	isWhitelist, err := s.ipRepo.QueryIP(c, version, ip)
 
-	if err != nil && err.Error() != "No such IP" {
-		return "", fmt.Errorf("Error when getting ip_rule from db: %v", err)
-	}
-
-	switch rule_type {
-	case model.IPWhiteList:
-		err = s.ipCache.Cache(c, rule_type, ip.String())
-	case model.IPBlackList:
-		err = s.ipCache.Cache(c, rule_type, ip.String())
-	default:
-		rule_type = model.IPGreyList
-		err = s.ipCache.Cache(c, model.IPGreyList, ip.String())
+	if err != nil {
+		if err == repository.ErrIPNotFound {
+			slog.Info("Cache not hit, greylist", "ip", ip.String())
+			rule_type = model.IPGreyList
+			err = s.ipCache.Cache(c, model.IPGreyList, ip.String())
+		} else {
+			return "", fmt.Errorf("Error when getting ip_rule from db: %v", err)
+		}
+	} else {
+		if isWhitelist {
+			slog.Info("Cache not hit, whitelist", "ip", ip.String())
+			rule_type = model.IPWhiteList
+			err = s.ipCache.Cache(c, model.IPWhiteList, ip.String())
+		} else {
+			slog.Info("Cache not hit, blacklist", "ip", ip.String())
+			rule_type = model.IPBlackList
+			err = s.ipCache.Cache(c, model.IPBlackList, ip.String())
+		}
 	}
 	if err != nil {
 		slog.Error(err.Error())

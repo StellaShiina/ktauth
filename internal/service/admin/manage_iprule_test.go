@@ -12,21 +12,21 @@ import (
 )
 
 func TestManageIPRule(t *testing.T) {
-	mysql, err := db.NewMySQL()
+	postgres, err := db.NewPostgres()
 	if err != nil {
 		t.Fatal(err)
 	}
 	c := context.Background()
-	IPRepo := repository.NewIPRepo(mysql)
+	IPRepo := repository.NewIPRepo(postgres)
 	s := admin.NewAdminIPRuleService(IPRepo)
 
 	fmt.Println("AddRule test...")
-	res, err := s.AddRule(c, "2606:4700:4700::1111", model.IPBlackList)
+	res, err := s.AddRule(c, "2606:4700:4700::1111", false)
 	if err != nil {
 		t.Fatal(err)
 	}
 	fmt.Printf("Add %s to %s\n", res, model.IPBlackList)
-	_, err = s.AddRule(c, "2606:4700:4700::1001", model.IPBlackList)
+	_, err = s.AddRule(c, "2606:4700:4700::1001", false)
 	if err == nil {
 		t.Fatal("duplicate error")
 	}
@@ -42,11 +42,8 @@ func TestManageIPRule(t *testing.T) {
 	}
 
 	fmt.Println("ListRules test...")
-	ips, err := s.ListRules(c)
+	_, err = s.ListRules(c)
 	if err != nil {
 		t.Fatal(err)
-	}
-	for _, ip := range ips {
-		fmt.Println(ip)
 	}
 }

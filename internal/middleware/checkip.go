@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"log/slog"
 	"net/http"
 
 	"github.com/StellaShiina/ktauth/internal/model"
@@ -20,6 +21,7 @@ func (m *CheckIPMiddleware) DenyBlackList() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		rule_type, err := m.ipAccessService.QueryRule(c, c.ClientIP())
 		if err != nil {
+			slog.Error(err.Error())
 			c.AbortWithStatus(http.StatusInternalServerError)
 			return
 		}

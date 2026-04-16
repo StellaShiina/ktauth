@@ -2,89 +2,97 @@ package repository
 
 import (
 	"context"
-	"database/sql"
+	"errors"
 	"fmt"
 	"log/slog"
+	"net"
 
 	"github.com/StellaShiina/ktauth/internal/model"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+var ErrIPNotFound = errors.New("ip rule not found")
+var ErrIPExist = errors.New("ip range already exist")
+
 type IPRepo struct {
-	db *sql.DB
+	pool *pgxpool.Pool
 }
 
-func NewIPRepo(db *sql.DB) *IPRepo {
-	return &IPRepo{db: db}
+func NewIPRepo(pool *pgxpool.Pool) *IPRepo {
+	return &IPRepo{pool: pool}
 }
 
-func (r *IPRepo) AddIP(ctx context.Context, version model.IPVersion, ip_bin []byte, rule_type model.IPRuleType) error {
-	result, err := r.db.ExecContext(ctx, "INSERT INTO ip (version, ip_bin, rule_type) VALUES (?, ?, ?)", version, ip_bin, rule_type)
+func (r *IPRepo) AddIP(ctx context.Context, version int16, ipRange *net.IPNet, isWhitelist bool) error {
+	_, err := r.pool.Exec(ctx, "INSERT INTO ip (version, ip_range, is_whitelist) VALUES ($1, $2, $3)", version, ipRange, isWhitelist)
 	if err != nil {
+		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == "23505" {
+			return ErrIPExist
+		}
 		slog.Error("IPRepo AddIP: " + err.Error())
-		return fmt.Errorf("IPRepo AddIP: %v", err)
-	}
-	_, err = result.LastInsertId()
-	if err != nil {
-		slog.Error("IPRepo AddIP: " + err.Error())
-		return fmt.Errorf("IPRepo AddIP: %v", err)
+		return fmt.Errorf("IPRepo AddIP: %w", err)
 	}
 	slog.Debug("IPRepo AddIP success")
 	return nil
 }
 
-func (r *IPRepo) DelIP(ctx context.Context, version model.IPVersion, ip_bin []byte) error {
-	res, err := r.db.ExecContext(ctx, "DELETE FROM ip WHERE version = ? AND ip_bin = ?", version, ip_bin)
+func (r *IPRepo) DelIP(ctx context.Context, version int16, ipRange *net.IPNet) error {
+	res, err := r.pool.Exec(ctx, "DELETE FROM ip WHERE version = $1 AND ip_range = $2", version, ipRange)
 	if err != nil {
 		slog.Error("IPRepo DelIP: " + err.Error())
 		return err
 	}
-	rowsAffected, err := res.RowsAffected()
-	if err != nil {
-		slog.Error("IPRepo DelIP: " + err.Error())
-		return err
-	}
+	rowsAffected := res.RowsAffected()
 	if rowsAffected == 0 {
-		return fmt.Errorf("No such row!")
+		return ErrIPNotFound
 	}
 	slog.Debug("IPRepo DelIP success")
 	return nil
 }
 
-func (r *IPRepo) QueryIP(ctx context.Context, version model.IPVersion, ip_bin []byte) (model.IPRuleType, error) {
-	var rule_type model.IPRuleType
+func (r *IPRepo) QueryIP(ctx context.Context, version int16, clientIP net.IP) (bool, error) {
+	var isWhitelist bool
 
-	row := r.db.QueryRowContext(ctx, "SELECT rule_type FROM ip WHERE version = ? AND ip_bin = ?", version, ip_bin)
-	if err := row.Scan(&rule_type); err != nil {
-		if err == sql.ErrNoRows {
-			return "", fmt.Errorf("No such IP")
+	sql := `
+		SELECT is_whitelist
+		FROM ip
+		WHERE version = $1
+			AND $2::inet <<= ip_range
+	`
+
+	row := r.pool.QueryRow(ctx, sql, version, clientIP.String())
+
+	if err := row.Scan(&isWhitelist); err != nil {
+		if err == pgx.ErrNoRows {
+			return false, ErrIPNotFound
 		}
-		return "", fmt.Errorf("Error when scanning: %v", err)
+		return false, fmt.Errorf("Error when scanning: %w", err)
 	}
-	return rule_type, nil
+	return isWhitelist, nil
 }
 
 func (r *IPRepo) GetIPs(ctx context.Context) ([]model.IP, error) {
 	var ips []model.IP
 
-	rows, err := r.db.QueryContext(ctx, "SELECT * FROM ip;")
+	rows, err := r.pool.Query(ctx, "SELECT * FROM ip")
 
 	if err != nil {
 		slog.Error("GetIPs error: " + err.Error())
-		return nil, fmt.Errorf("GetIPs error %v", err)
+		return nil, fmt.Errorf("GetIPs error %w", err)
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var ip model.IP
-		// if err := rows.Scan(&ip.ID, &ip.CIDR, &ip.RuleType, &ip.Note, &ip.CreateAt, &ip.UpdateAt); err != nil {
-		if err := rows.Scan(&ip.ID, &ip.Version, &ip.IP_bin, &ip.RuleType, &ip.CreateAt, &ip.UpdateAt, &ip.Note); err != nil {
+		if err := rows.Scan(&ip.ID, &ip.Version, &ip.IPRange, &ip.IsWhitelist, &ip.CreateAt, &ip.UpdateAt, &ip.Note); err != nil {
 			slog.Error("GetIPs error: " + err.Error())
-			return nil, fmt.Errorf("GetIPs error %v", err)
+			return nil, fmt.Errorf("GetIPs error %w", err)
 		}
 		ips = append(ips, ip)
 	}
 	if err := rows.Err(); err != nil {
 		slog.Error("GetIPs error: " + err.Error())
-		return nil, fmt.Errorf("GetIPs error %v", err)
+		return nil, fmt.Errorf("GetIPs error %w", err)
 	}
 	return ips, nil
 }
