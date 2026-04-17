@@ -17,7 +17,7 @@ func NewAuthMiddleWare(s *identity.SessionService) *AuthMiddleWare {
 	return &AuthMiddleWare{s}
 }
 
-func (m *AuthMiddleWare) VerifySession() gin.HandlerFunc {
+func (m *AuthMiddleWare) VerifySession(requireRole string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authStr := c.GetHeader("Authorization")
 		if !strings.HasPrefix(authStr, "Bearer ") {
@@ -43,6 +43,11 @@ func (m *AuthMiddleWare) VerifySession() gin.HandlerFunc {
 
 		c.Set("uuid", claims.UUID)
 		c.Set("jti", claims.ID)
+
+		if requireRole == "admin" && claims.Role != "admin" {
+			c.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
 
 		c.Next()
 	}

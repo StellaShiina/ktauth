@@ -17,26 +17,36 @@ func TestManageIPRule(t *testing.T) {
 		t.Fatal(err)
 	}
 	c := context.Background()
-	IPRepo := repository.NewIPRepo(postgres)
-	s := admin.NewAdminIPRuleService(IPRepo)
+	ipRepo := repository.NewIPRepo(postgres)
+
+	rdb, err := db.NewRedis()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ipCache := repository.NewIPCache(rdb)
+	rateLimitRepo := repository.NewRateLimitRepo(rdb)
+
+	s := admin.NewAdminIPRuleService(ipRepo, ipCache, rateLimitRepo)
+
+	note := "test"
 
 	fmt.Println("AddRule test...")
-	res, err := s.AddRule(c, "2606:4700:4700::1111", false)
+	res, err := s.AddRule(c, "2606:4700:4700::1111", false, &note)
 	if err != nil {
 		t.Fatal(err)
 	}
 	fmt.Printf("Add %s to %s\n", res, model.IPBlackList)
-	_, err = s.AddRule(c, "2606:4700:4700::1001", false)
+	_, err = s.AddRule(c, "2606:4700:4700::1001", false, &note)
 	if err == nil {
 		t.Fatal("duplicate error")
 	}
 
 	fmt.Println("DelRule test...")
-	err = s.DelRule(c, "2606:4700:4700::1001")
+	_, err = s.DelRule(c, "2606:4700:4700::1001")
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = s.DelRule(c, "2606:4700:4700::1111")
+	_, err = s.DelRule(c, "2606:4700:4700::1111")
 	if err == nil {
 		t.Fatal("Delete a not exist ip")
 	}

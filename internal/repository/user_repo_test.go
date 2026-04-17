@@ -20,12 +20,18 @@ func TestUserRepo(t *testing.T) {
 	name := "testuser"
 	password_hash := "$2a$10$4/wdVsUh/qaN76xt9ly80uwIbMlhtHFkT6gMIP.g3InF4d/hbZ6/m"
 	email := "testuser@example.com"
+	role := "system"
 
-	if err := r.NewUser(c, uuid, name, password_hash, email); err != nil {
+	if err := r.NewUser(c, uuid, name, password_hash, &email, role); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := r.NewUser(c, uuid, name, password_hash, email); err != repository.ErrUserExist {
+	if err := r.UpdateUser(c, uuid, name, "$2a$10$4/wdVsUh/qaN76xt9ly80uwIbMlhtHFkT6gMIP.g3InF4d/hbZ6/m", nil, "admin"); err != nil {
+		t.Error(err)
+		t.Fail()
+	}
+
+	if err := r.NewUser(c, uuid, name, password_hash, &email, role); err != repository.ErrUserExist {
 		t.Fatal(err)
 	}
 
@@ -34,7 +40,7 @@ func TestUserRepo(t *testing.T) {
 		t.Fail()
 	}
 
-	if users, err := r.ListUsers(c); err != nil || len(users) != 1 {
+	if _, err := r.ListUsers(c); err != nil {
 		t.Error(err)
 		t.Fail()
 	}

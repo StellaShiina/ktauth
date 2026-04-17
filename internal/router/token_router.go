@@ -6,8 +6,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterTokenRouter(r *gin.Engine, h *handler.TokenHandler, m *middleware.CheckIPMiddleware) {
-	token := r.Group("/api/token", m.WhiteListOnly())
+func RegisterTokenRouter(r *gin.Engine, h *handler.TokenHandler, aclm *middleware.CheckIPMiddleware, authm *middleware.AuthMiddleWare) {
+	token := r.Group("/api/tokens", aclm.ACL(1), authm.VerifySession("admin"))
 	{
 		token.GET("/restock", h.Restock)
 		token.DELETE("/flush", h.FlushTokens)

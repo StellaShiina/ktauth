@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/StellaShiina/ktauth/internal/model"
@@ -44,4 +45,10 @@ func (r *IPCache) Get(c context.Context, ip string) (string, error) {
 		return "", err
 	}
 	return ruleStr, nil
+}
+
+func (r *IPCache) Delete(c context.Context, ip string) error {
+	keyPrefix := "rule:ip:"
+	slog.Debug("Try to delete", "key", keyPrefix+ip)
+	return r.rdb.Del(c, keyPrefix+ip).Err()
 }

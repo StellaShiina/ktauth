@@ -8,11 +8,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterUserRouter(r *gin.Engine, h *handler.UserHandler, m *middleware.AuthMiddleWare, rm *middleware.RateLimitMiddleware) {
-	r.POST("/api/user/register", rm.RateLimit(), h.RegisterUser)
-	r.POST("/api/user/login", rm.RateLimit(), h.LoginUser)
-	r.POST("/api/user/code", rm.RateLimit(), h.RequireCode)
-	user := r.Group("/api/user", m.VerifySession())
+func RegisterUserRouter(r *gin.Engine, h *handler.UserHandler, aclm *middleware.CheckIPMiddleware, m *middleware.AuthMiddleWare, rm *middleware.RateLimitMiddleware) {
+	r.POST("/api/users/register", aclm.ACL(0), rm.RateLimit(), h.RegisterUser)
+	r.POST("/api/users/login", aclm.ACL(0), rm.RateLimit(), h.LoginUser)
+	user := r.Group("/api/users", aclm.ACL(0), m.VerifySession(""))
 	{
 		user.GET("/auth", func(ctx *gin.Context) { ctx.Status(http.StatusNoContent) })
 		user.GET("/logout", h.LogoutUser)

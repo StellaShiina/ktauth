@@ -5,3 +5,4 @@ ktauth
 !cmd/ktauth
 *.env
 *.log
+docker-compose.test.yaml

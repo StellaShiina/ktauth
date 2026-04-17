@@ -8,7 +8,6 @@ import (
 	"github.com/StellaShiina/ktauth/internal/auth"
 	"github.com/StellaShiina/ktauth/internal/crypto"
 	"github.com/StellaShiina/ktauth/internal/service/identity"
-	"github.com/StellaShiina/ktauth/pkg/iputils"
 	"github.com/gin-gonic/gin"
 )
 
@@ -20,7 +19,6 @@ type UserHandler struct {
 
 type register struct {
 	Token    *string `form:"token" json:"token" xml:"token"`
-	Code     *string `form:"code" json:"code" xml:"code"`
 	User     string  `form:"user" json:"user" xml:"user"  binding:"required"`
 	Password string  `form:"password" json:"password" xml:"password" binding:"required"`
 	Email    *string `form:"email" json:"email" xml:"email"`
@@ -31,40 +29,12 @@ type login struct {
 	Password string `form:"password" json:"password" xml:"password" binding:"required"`
 }
 
-type requierCode struct {
-	Email string `form:"email" json:"email" xml:"email" binding:"required"`
-}
-
 func NewUserHandler(sessionService *identity.SessionService, accountService *identity.AccountService, consumeTokenService *identity.ConsumeTokenService) *UserHandler {
 	return &UserHandler{sessionService, accountService, consumeTokenService}
 }
 
-func (h *UserHandler) RequireCode(c *gin.Context) {
-	var json requierCode
-	if err := c.ShouldBindJSON(&json); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	_, _, ipNet, err := iputils.ProcessIP(c.ClientIP())
-	if err != nil {
-		c.String(http.StatusInternalServerError, err.Error())
-		return
-	}
-	err = h.accountService.RequireCode(c.Request.Context(), json.Email, ipNet.String())
-	if err != nil {
-		if err.Error() == "Rate limit exceeded" {
-			c.String(http.StatusTooManyRequests, "Rate limit exceeded")
-			return
-		}
-		c.String(http.StatusInternalServerError, err.Error())
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{"message": "Verification code has sent(TTL:15min). Check your email(including spam, from ktauth.vvan.win)."})
-}
-
 func (h *UserHandler) RegisterUser(c *gin.Context) {
 	var json register
-	var email string
 	if err := c.ShouldBindJSON(&json); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -75,28 +45,12 @@ func (h *UserHandler) RegisterUser(c *gin.Context) {
 			c.JSON(http.StatusUnauthorized, gin.H{"status": "unauthorized"})
 			return
 		}
-	} else if json.Code != nil && json.Email != nil {
-		valid, err := h.accountService.VerifyCode(c.Request.Context(), *json.Email, *json.Code)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-		if !valid {
-			c.JSON(http.StatusUnauthorized, gin.H{"status": "unauthorized"})
-			return
-		}
 	} else {
-		c.String(http.StatusBadRequest, "missing token or email+code")
+		c.String(http.StatusBadRequest, "missing token")
 		return
 	}
 
-	if json.Email == nil {
-		email = ""
-	} else {
-		email = *json.Email
-	}
-
-	uuid, err := h.accountService.NewUser(c.Request.Context(), json.User, json.Password, email)
+	uuid, err := h.accountService.NewUser(c.Request.Context(), json.User, json.Password, json.Email, "user")
 	if err != nil {
 		fmt.Println("Register new user failed:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create"})
@@ -126,7 +80,7 @@ func (h *UserHandler) LoginUser(c *gin.Context) {
 		return
 	}
 
-	tokenStr, jti, err := auth.SignToken(user.UUID, user.Name)
+	tokenStr, jti, err := auth.SignToken(user.UUID, user.Name, user.Role)
 
 	if err != nil {
 		c.String(http.StatusInternalServerError, "Server error")
@@ -137,6 +91,11 @@ func (h *UserHandler) LoginUser(c *gin.Context) {
 
 	if err != nil {
 		c.String(http.StatusInternalServerError, "Server error")
+		return
+	}
+
+	if c.Query("format") == "string" {
+		c.String(http.StatusOK, tokenStr)
 		return
 	}
 

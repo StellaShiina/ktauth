@@ -13,3 +13,10 @@ type IPResponse struct {
 	UpdateAt    time.Time // 对应 TIMESTAMPTZ
 	Note        string    // 对应 TEXT
 }
+
+type UserResponse struct {
+	ID    string
+	Name  string
+	Email string
+	Role  string
+}

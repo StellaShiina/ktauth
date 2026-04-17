@@ -24,8 +24,8 @@ func NewIPRepo(pool *pgxpool.Pool) *IPRepo {
 	return &IPRepo{pool: pool}
 }
 
-func (r *IPRepo) AddIP(ctx context.Context, version int16, ipRange *net.IPNet, isWhitelist bool) error {
-	_, err := r.pool.Exec(ctx, "INSERT INTO ip (version, ip_range, is_whitelist) VALUES ($1, $2, $3)", version, ipRange, isWhitelist)
+func (r *IPRepo) AddIP(ctx context.Context, version int16, ipRange *net.IPNet, isWhitelist bool, note *string) error {
+	_, err := r.pool.Exec(ctx, "INSERT INTO ip (version, ip_range, is_whitelist, note) VALUES ($1, $2, $3, $4)", version, ipRange, isWhitelist, note)
 	if err != nil {
 		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == "23505" {
 			return ErrIPExist
@@ -33,7 +33,7 @@ func (r *IPRepo) AddIP(ctx context.Context, version int16, ipRange *net.IPNet, i
 		slog.Error("IPRepo AddIP: " + err.Error())
 		return fmt.Errorf("IPRepo AddIP: %w", err)
 	}
-	slog.Debug("IPRepo AddIP success")
+	slog.Debug("IPRepo AddIP success", "IPRange", ipRange.String())
 	return nil
 }
 
@@ -47,7 +47,7 @@ func (r *IPRepo) DelIP(ctx context.Context, version int16, ipRange *net.IPNet) e
 	if rowsAffected == 0 {
 		return ErrIPNotFound
 	}
-	slog.Debug("IPRepo DelIP success")
+	slog.Debug("IPRepo DelIP success", "IPRange", ipRange.String())
 	return nil
 }
 

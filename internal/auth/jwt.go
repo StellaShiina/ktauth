@@ -2,6 +2,7 @@ package auth
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -9,20 +10,22 @@ import (
 )
 
 // TODO
-var mySecret = []byte("hello-world")
+var mySecret = []byte(os.Getenv("JWT_SECRET"))
 
 type Claims struct {
 	UUID string
 	Name string
+	Role string
 	jwt.RegisteredClaims
 }
 
 // Return token string, jti string, error
-func SignToken(uid, name string) (string, string, error) {
+func SignToken(uid, name, role string) (string, string, error) {
 	jti := uuid.NewString()
 	claims := &Claims{
 		uid,
 		name,
+		role,
 		jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(144 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

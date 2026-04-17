@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
@@ -45,6 +46,25 @@ else
 end
 `)
 
+var increaseWithExpireScript = redis.NewScript(`
+-- KEYS[1] = key
+-- ARGV[1] = ttl (seconds)
+-- ARGV[2] = limit
+
+local cnt = redis.call("INCR", KEYS[1])
+
+if cnt == 1 then
+	redis.call("EXPIRE", KEYS[1], ARGV[1])
+end
+
+if cnt == tonumber(ARGV[2]) then
+	redis.call("DEL", KEYS[1])
+	return -1
+end
+
+return cnt
+`)
+
 // Allow checks if a request is allowed based on the sliding window algorithm
 // key: Unique identifier for the limit (e.g., "ratelimit:ip:127.0.0.1")
 // limit: Maximum number of requests allowed in the window
@@ -74,4 +94,26 @@ func (r *RateLimitRepo) Allow(ctx context.Context, key string, limit int, window
 		return res == 1, nil
 	}
 	return false, fmt.Errorf("unexpected result type from redis script: %T", result)
+}
+
+func (r *RateLimitRepo) Abuse(ctx context.Context, cidr string, limit int, window time.Duration) (bool, error) {
+	slog.Debug("abuseinfo", "cidr", cidr, "limit", limit, "window", window)
+	key := []string{"abuse:429:" + cidr}
+	result, err := increaseWithExpireScript.Run(ctx, r.rdb, key, int(window.Seconds()), limit).Result()
+	if err != nil {
+		return false, fmt.Errorf("failed to execute rate limit script: %w", err)
+	}
+
+	if cnt, ok := result.(int64); ok {
+		slog.Debug("current count", "cnt", cnt)
+		return cnt == -1, nil
+	}
+
+	return false, fmt.Errorf("unexpected result type from redis script: %T", result)
+}
+
+func (r *RateLimitRepo) Delete(ctx context.Context, ip string) error {
+	key := fmt.Sprintf("ratelimit:ip:%s", ip)
+	slog.Debug("Try to delete", "key", key)
+	return r.rdb.Del(ctx, key).Err()
 }

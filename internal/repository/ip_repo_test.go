@@ -28,15 +28,16 @@ func TestIPRepo(t *testing.T) {
 	fmt.Println("Test AddIP")
 	alidns := "2400:3200::1/32"
 	alidns2 := net.ParseIP("2400:3200:baba::1")
+	note := "test"
 	version, _, ipNet, err := iputils.ProcessIP(alidns)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = IPRepo.AddIP(c, version, ipNet, true)
+	err = IPRepo.AddIP(c, version, ipNet, true, &note)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = IPRepo.AddIP(c, version, ipNet, true)
+	err = IPRepo.AddIP(c, version, ipNet, true, &note)
 	if err != repository.ErrIPExist {
 		t.Fatal(err)
 	}
