@@ -3,7 +3,7 @@ services:
     container_name: ktauth
     image: stellashiina/ktauth:latest
     ports:
-      - "10000:10000"
+      - "51214:51214"
     env_file:
       - .env
     environment:

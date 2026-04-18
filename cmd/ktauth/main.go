@@ -30,6 +30,7 @@ func main() {
 	var abuseLimit int
 	var abuseWindow time.Duration
 
+	// Set up logger
 	logLevelstr := strings.TrimSpace(strings.ToLower(os.Getenv("LOGLEVEL")))
 
 	switch logLevelstr {
@@ -52,6 +53,7 @@ func main() {
 	)
 	slog.SetDefault(logger)
 
+	// Configure rate limit
 	ratelimit, err := strconv.Atoi(os.Getenv("RATELIMIT"))
 	if err != nil {
 		slog.Warn("No available ratelimit conf, use default 60/min")
@@ -146,7 +148,7 @@ func main() {
 	router.RegisterIPRouter(r, ipRuleHandler, checkIPMiddleware, authMiddleWare)
 	router.RegisterUserManageRouter(r, userManageHandler, checkIPMiddleware, authMiddleWare)
 
-	r.Run(":10000")
+	r.Run(":51214")
 }
 
 func connectPostgres(timeout time.Duration) (*pgxpool.Pool, error) {

@@ -67,6 +67,96 @@
 cp .env.example .env && docker compose up -d
 ```
 
+## 📖 使用
+
+### API 端点说明
+
+以下列出了 KTAUTH 服务提供的所有 API 端点。
+> **权限说明：** 标有 `*` 的端点受双重保护：请求者必须拥有 **管理员权限** 且 IP 必须在 **白名单** 中。
+
+#### 🔑 核心认证端点
+用于对接 Caddy 等 reverse proxy 的 `forward_auth` 指令，实现网关层面的访问控制。
+
+| 方法 | 路径 | 描述 | 权限控制 |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/kt/0` | **综合认证端点**<br>黑名单拒绝，非白名单限速 | 公开 |
+| `GET` | `/kt/1` | **严格认证端点**<br>仅限白名单 IP 访问。 | 公开 |
+
+- **Caddy 配置示例**
+  ```Caddyfile
+  example.com {
+          # 替换为实际部署的端口
+          forward_auth localhost:10000 {
+                  uri /kt/0
+          }
+          # 替换为你的后端、file_server等
+          reverse_proxy localhost:8080
+  }
+  ```
+- **Nginx 示例配置**
+  ```conf
+  server {
+      listen 443 ssl;
+      server_name example.com;
+      ssl_certificate /path/to/certificate.crt;
+      ssl_certificate_key /path/to/private.key;
+
+      location / {
+          # 替换为非冲突路径
+          auth_request /auth;
+
+         # 替换为你的后端、file_server等
+          proxy_pass http://localhost:8080;
+      }
+
+      # 鉴权子请求
+      location = /auth {
+          internal;
+
+          # 替换为实际部署的端口
+          proxy_pass http://localhost:10000/kt/0;
+
+          proxy_set_header X-Original-URI $request_uri;
+          proxy_set_header X-Original-Method $request_method;
+          proxy_set_header X-Forwarded-For $remote_addr;
+
+          proxy_pass_request_body off;
+          proxy_set_header Content-Length "";
+      }
+  }
+  ```
+
+
+#### 👤 用户管理
+处理用户生命周期与身份验证。
+
+| 方法 | 路径 | 描述 | 权限控制 |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/users/register` | 用户注册 | 非黑名单 + 限速 |
+| `POST` | `/api/users/login` | 用户登录 | 非黑名单 + 限速 |
+| `GET` | `/api/users/auth` | 验证登录状态 | 非黑名单 + 限速 + 用户 |
+| `GET` | `/api/users/logout` | 登出当前会话 | 非黑名单 + 限速 + 用户 |
+| `GET` | `/api/users` | 获取用户列表 | `*` 管理员 + 白名单 |
+
+#### 🎫 令牌管理
+用于生成和管理注册邀请码。
+
+| 方法 | 路径 | 描述 | 权限控制 |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/tokens/restock` | 批量生成可用 Token | `*` 管理员 + 白名单 |
+| `DELETE`| `/api/tokens/flush` | 清空所有可用 Token | `*` 管理员 + 白名单 |
+| `GET` | `/api/tokens` | 获取一个可用 Token | `*` 管理员 + 白名单 |
+| `GET` | `/api/tokens/all` | 获取所有可用 Token | `*` 管理员 + 白名单 |
+
+#### 🛡️ IP 访问控制
+管理 IP 黑白名单规则。
+
+| 方法 | 路径 | 描述 | 权限控制 |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/ips` | 列出当前 IP 规则表 | `*` 管理员 + 白名单 |
+| `POST` | `/api/ips/new` | 新建 IP 规则 | `*` 管理员 + 白名单 |
+| `DELETE`| `/api/ips` | 删除指定 IP 规则 | `*` 管理员 + 白名单 |
+
 ## 📂 项目结构
 
 ```
