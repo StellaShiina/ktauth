@@ -6,3 +6,4 @@ ktauth
 *.env
 *.log
 docker-compose.test.yaml
+.wrangler

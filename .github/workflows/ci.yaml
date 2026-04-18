@@ -43,7 +43,7 @@ jobs:
       - name: Create Release Package 
         run: |
           mkdir -p dist
-          zip -r dist/ktauth_${{ github.ref_name }}.zip docker-compose.yaml init/00-init.sql
+          zip -r dist/ktauth_${{ github.ref_name }}.zip docker-compose.yaml init/00-init.sql .env.example
 
       - name: Create Release
         uses: softprops/action-gh-release@v1

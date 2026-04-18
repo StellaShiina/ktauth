@@ -62,7 +62,12 @@
 前置要求
 - [Docker](https://www.docker.com/) & [Docker Compose](https://docs.docker.com/compose/)
 
-启动
+一键安装脚本
+```bash
+bash <(curl -fsSL https://ktauth.kaju.win/install.sh) install
+```
+
+下载解压后启动
 ```bash
 cp .env.example .env && docker compose up -d
 ```
@@ -72,9 +77,11 @@ cp .env.example .env && docker compose up -d
 ### API 端点说明
 
 以下列出了 KTAUTH 服务提供的所有 API 端点。
+
 > **权限说明：** 标有 `*` 的端点受双重保护：请求者必须拥有 **管理员权限** 且 IP 必须在 **白名单** 中。
 
 #### 🔑 核心认证端点
+
 用于对接 Caddy 等 reverse proxy 的 `forward_auth` 指令，实现网关层面的访问控制。
 
 | 方法 | 路径 | 描述 | 权限控制 |
@@ -125,7 +132,6 @@ cp .env.example .env && docker compose up -d
       }
   }
   ```
-
 
 #### 👤 用户管理
 处理用户生命周期与身份验证。
