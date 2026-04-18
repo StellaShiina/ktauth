@@ -1,0 +1,11 @@
+name = "ktauth"
+main = "worker.ts"
+compatibility_date = "2026-04-18"
+
+[assets]
+directory = "./scripts"
+binding = "ASSETS"
+not_found_handling = "404-page"
+
+[observability]
+enabled = true
