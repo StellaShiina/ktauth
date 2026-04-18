@@ -64,7 +64,7 @@
 
 一键安装脚本
 ```bash
-bash <(curl -fsSL https://ktauth.kaju.win/install.sh) install
+bash <(curl -fsSL https://ktauth.kaju.win) install
 ```
 
 下载解压后启动

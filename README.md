@@ -64,7 +64,7 @@ The name "KTAUTH" is derived from "Kantan Auth" (Japanese: 簡単), meaning "Sim
 
 One-click installation script
 ```bash
-bash <(curl -fsSL https://ktauth.kaju.win/install.sh) install
+bash <(curl -fsSL https://ktauth.kaju.win) install
 ```
 
 Start after downloading and extracting.

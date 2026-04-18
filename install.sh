@@ -9,7 +9,7 @@ NC='\033[0m'
 
 PROJECT_NAME='ktauth'
 PROJECT_BRANCH='main'
-PROJECT_URL="https://raw.githubusercontent.com/stellashiina/${PROJECT_NAME}/${PROJECT_BRANCH}"
+DOWNLOAD_URL="https://ktauth.kaju.win"
 DEPLOY_DIR="/opt/${PROJECT_NAME}"
 ADDRESS='51214'
 
@@ -70,9 +70,17 @@ install_docker() {
     fi
 }
 
+update() {
+    if [[ ! -f "${DEPLOY_DIR}/.PORT" ]]; then
+        touch 644 "${DEPLOY_DIR}/.PORT"
+        echo "10000" > "${DEPLOY_DIR}/.PORT"
+    fi
+}
+
 deploy() {
     if [[ -d "${DEPLOY_DIR}" ]]; then
         if yesno "It seems that you've already install ktauth, do you want to update?"; then
+            update
             docker compose -f "${DEPLOY_DIR}/docker-compose.yaml" down
             docker pull stellashiina/ktauth:latest
         else
@@ -85,27 +93,25 @@ deploy() {
 
     log_info "Downloading project files"
     
-    curl -fsSL -o "${DEPLOY_DIR}/docker-compose.yaml" "${PROJECT_URL}/docker-compose.yaml"
-    log_info "${PROJECT_URL}/docker-compose.yaml -> ${DEPLOY_DIR}/docker-compose.yaml"
+    curl -fsSL -o "${DEPLOY_DIR}/docker-compose.yaml" "${DOWNLOAD_URL}/docker-compose.yaml"
+    log_info "${DOWNLOAD_URL}/docker-compose.yaml -> ${DEPLOY_DIR}/docker-compose.yaml"
 
-    curl -fsSL -o "${DEPLOY_DIR}/init/00-init.sql" "${PROJECT_URL}/init/00-init.sql"
-    log_info "${PROJECT_URL}/init/00-init.sql -> ${DEPLOY_DIR}/init/00-init.sql"
-
-
+    curl -fsSL -o "${DEPLOY_DIR}/init/00-init.sql" "${DOWNLOAD_URL}/00-init.sql"
+    log_info "${DOWNLOAD_URL}/00-init.sql -> ${DEPLOY_DIR}/init/00-init.sql"
 
     if [[ ! -f "${DEPLOY_DIR}/.env" ]]; then
-        curl -fsSL -o "${DEPLOY_DIR}/.env.example" "${PROJECT_URL}/.env.example"
-        log_info "${PROJECT_URL}/.env.example -> ${DEPLOY_DIR}/.env.example"
+        curl -fsSL -o "${DEPLOY_DIR}/.env.example" "${DOWNLOAD_URL}/.env.example"
+        log_info "${DOWNLOAD_URL}/.env.example -> ${DEPLOY_DIR}/.env.example"
         cp "${DEPLOY_DIR}/.env.example" "${DEPLOY_DIR}/.env"
         log_info "${DEPLOY_DIR}/.env.example -> ${DEPLOY_DIR}/.env"
-        config
     else
         if noyes "Overwrite current .env with latest .env.example?"; then
-            curl -fsSL -o "${DEPLOY_DIR}/.env.example" "${PROJECT_URL}/.env"
-            log_info "${PROJECT_URL}/.env.example -> ${DEPLOY_DIR}/.env"
-            config
+            curl -fsSL -o "${DEPLOY_DIR}/.env" "${DOWNLOAD_URL}/.env.example"
+            log_info "${DOWNLOAD_URL}/.env.example -> ${DEPLOY_DIR}/.env"
         fi
     fi
+
+    config
 
     cd "${DEPLOY_DIR}"
 
@@ -141,9 +147,8 @@ config() {
     if [[ -z "${ADDRESS//[[:space:]]/}" ]]; then
         ADDRESS="${CUR_ADDRESS}"
         log_warn "Empty input, use default/current listen port"
-    else
-        sed -i "s|^\( *- \"\).*\(:51214\"\)$|\1${ADDRESS}\2|" "${DEPLOY_DIR}/docker-compose.yaml"
     fi
+    sed -i "s|^\( *- \"\).*\(:51214\"\)$|\1${ADDRESS}\2|" "${DEPLOY_DIR}/docker-compose.yaml"
 
     echo "$ADDRESS" > "${DEPLOY_DIR}/.PORT"
 }
@@ -190,9 +195,6 @@ case "$1" in
         exit 0
         ;;
     "install")
-        if [[ "$2" == "preview" ]]; then
-            PROJECT_BRANCH="preview"
-        fi
         main
         exit 0
         ;;
