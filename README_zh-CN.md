@@ -6,6 +6,29 @@
 
 项目名称 "KTAUTH" 源自日语 "Kantan Auth" (簡単)，意为 "简单认证"。
 
+## 快速开始
+
+```bash
+bash <(curl -fsSL https://ktauth.kaju.win) install
+```
+
+### 脚本使用
+
+```bash
+curl -fsSL -o ktauth.sh https://ktauth.kaju.win
+chmod +x ktauth.sh
+# 安装或更新
+./ktauth.sh install
+# 卸载
+./ktauth.sh uninstall
+# 更新
+./ktauth.sh update
+# 配置参数
+./ktauth.sh config
+# 增加白名单
+./ktauth.sh allow
+```
+
 ## 🚀 技术栈 (Tech Stack)
 
 - **开发语言:** [Go 1.25+](https://go.dev/)

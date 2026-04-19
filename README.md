@@ -6,6 +6,29 @@
 
 The name "KTAUTH" is derived from "Kantan Auth" (Japanese: 簡単), meaning "Simple Auth".
 
+## Quick start
+
+```bash
+bash <(curl -fsSL https://ktauth.kaju.win) install
+```
+
+### script usage
+
+```bash
+curl -fsSL -o ktauth.sh https://ktauth.kaju.win
+chmod +x ktauth.sh
+# install or update
+./ktauth.sh install
+# uninstall ktauth
+./ktauth.sh uninstall
+# update ktauth
+./ktauth.sh update
+# update configuration
+./ktauth.sh config
+# add acl whitlist
+./ktauth.sh allow
+```
+
 ## 🚀 Tech Stack
 
 - **Language:** [Go 1.25+](https://go.dev/)

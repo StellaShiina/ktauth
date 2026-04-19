@@ -27,7 +27,7 @@ func SignToken(uid, name, role string) (string, string, error) {
 		name,
 		role,
 		jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(144 * time.Hour)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(168 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			NotBefore: jwt.NewNumericDate(time.Now()),
 			Issuer:    "ktauth",

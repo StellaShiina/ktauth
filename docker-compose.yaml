@@ -11,6 +11,7 @@ services:
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
       - GIN_MODE=release
+    restart: always
   postgres:
     container_name: ktauth-db
     image: postgres:latest
