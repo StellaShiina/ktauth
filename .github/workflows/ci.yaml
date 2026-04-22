@@ -11,6 +11,7 @@ on:
       - README_zh-CN.md
       - LICENSE
       - install.sh
+      - worker/**
 
 jobs:
   go-test:
