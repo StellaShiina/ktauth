@@ -284,6 +284,16 @@ add_whitelist() {
 {"user":"${ADMIN_NAME}","password":"${ADMIN_PASSWD}"}
 EOF
 )
+    # listips
+    ips=$(curl -sSL -H "Authorization: Bearer ${token}" \
+        "${host}/api/ips")
+    log_info 'current ip whitelist'
+    if check_cmd jq; then
+        echo "$ips" | jq '.rules[].IPCIDR'
+    else
+        log_info 'install jq to get prettier output'
+        echo "$ips"
+    fi
     # addip
     while yesno "Continue to add whitelist IP?"; do
         read -r -p "Input IP: " ip
