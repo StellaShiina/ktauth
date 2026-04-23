@@ -1,5 +1,5 @@
-init/*
-!init/00-init.sql
+sql/*
+!sql/00-init.sql
 *.exe
 ktauth
 !cmd/ktauth

@@ -5,9 +5,9 @@ compatibility_date = "2026-04-22"
 [build]
 command = """
 mkdir -p scripts
-cp ../install.sh scripts/
+cp ../scripts/install.sh scripts/
 cp ../docker-compose.yaml scripts/
-cp ../init/00-init.sql scripts/
+cp ../sql/00-init.sql scripts/
 cp ../.env.example scripts/
 """
 

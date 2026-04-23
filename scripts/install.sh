@@ -135,8 +135,8 @@ dl_dockercomposeyaml() {
 }
 
 dl_sqlinit() {
-    curl -fsSL -o "${DEPLOY_DIR}/init/00-init.sql" "${DOWNLOAD_URL}/00-init.sql"
-    log_info "${DOWNLOAD_URL}/00-init.sql -> ${DEPLOY_DIR}/init/00-init.sql"
+    curl -fsSL -o "${DEPLOY_DIR}/sql/00-init.sql" "${DOWNLOAD_URL}/00-init.sql"
+    log_info "${DOWNLOAD_URL}/00-init.sql -> ${DEPLOY_DIR}/sql/00-init.sql"
 }
 
 dl_envexample() {
@@ -210,7 +210,7 @@ deploy() {
         fi
     fi
 
-    mkdir -p 755 "${DEPLOY_DIR}/init"
+    mkdir -p 755 "${DEPLOY_DIR}/sql"
 
     cd "${DEPLOY_DIR}"
 

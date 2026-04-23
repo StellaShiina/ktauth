@@ -6,7 +6,7 @@ services:
       - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql
-      - ./init:/docker-entrypoint-initdb.d
+      - ./sql:/docker-entrypoint-initdb.d
     environment:
       - POSTGRES_DB=ktauth
       - POSTGRES_PASSWORD=ktauth
