@@ -14,6 +14,6 @@ FROM alpine:3.23
 
 COPY --from=builder /usr/local/bin/ktauth /ktauth
 
-EXPOSE 10000
+EXPOSE 51214
 
 CMD [ "/ktauth" ]
