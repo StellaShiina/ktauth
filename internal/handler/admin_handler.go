@@ -68,7 +68,27 @@ func (h *IPRuleHandler) AddRule(c *gin.Context) {
 }
 
 func (h *IPRuleHandler) ListRules(c *gin.Context) {
-	rules, err := h.adminIPRuleService.ListRules(c.Request.Context())
+	var version *int16
+	var isWhiteList *bool
+	versionStr := c.Query("version")
+	typeStr := c.Query("type")
+	switch versionStr {
+	case "4":
+		versionInt := int16(4)
+		version = &versionInt
+	case "6":
+		versionInt := int16(6)
+		version = &versionInt
+	}
+	switch typeStr {
+	case "white":
+		typeBool := true
+		isWhiteList = &typeBool
+	case "black":
+		typeBool := false
+		isWhiteList = &typeBool
+	}
+	rules, err := h.adminIPRuleService.ListRules(c.Request.Context(), version, isWhiteList)
 	if err != nil {
 		c.String(http.StatusInternalServerError, "Server error...")
 		return
