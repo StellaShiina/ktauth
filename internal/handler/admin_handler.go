@@ -14,8 +14,9 @@ import (
 var ipe *iputils.IPError
 
 type rule struct {
-	IP   string  `json:"ip"`
-	Note *string `json:"note"`
+	IP          string  `json:"ip"`
+	Note        *string `json:"note"`
+	IsWhiteList *bool   `json:"isWhiteList"`
 }
 
 type IPRuleHandler struct {
@@ -42,8 +43,8 @@ func (h *IPRuleHandler) AddRule(c *gin.Context) {
 	}
 
 	var isWhiteList bool
-	isBan := c.Query("ban")
-	if isBan != "" {
+	isBan := c.Query("ban") // legacy, may be removed in future
+	if isBan != "" || (json.IsWhiteList != nil && *json.IsWhiteList == false) {
 		isWhiteList = false
 	} else {
 		isWhiteList = true
