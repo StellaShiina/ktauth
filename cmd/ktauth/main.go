@@ -186,6 +186,7 @@ func updateAdmin(s *identity.AccountService) error {
 	adminPasswd := os.Getenv("ADMIN_PASSWD")
 	if adminName == "" || adminPasswd == "" {
 		slog.Warn("No admin conf, use default admin:admin")
+		adminName, adminPasswd = "admin", "admin"
 	}
 	return s.UpdateUser(context.Background(), "00000000-0000-0000-0000-000000000000", adminName, adminPasswd, nil, "admin")
 }

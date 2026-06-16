@@ -186,6 +186,13 @@ cp .env.example .env && docker compose up -d
 | `POST` | `/api/ips/new` | 新建 IP 规则 | `*` 管理员 + 白名单 |
 | `DELETE`| `/api/ips` | 删除指定 IP 规则 | `*` 管理员 + 白名单 |
 
+## 📖 开发者文档
+
+架构设计、模块说明与扩展指南请参见：
+
+- [中文开发者文档](./DEVELOPER.md)
+- [English Developer Guide](./DEVELOPER_EN.md)
+
 ## 📂 项目结构
 
 ```

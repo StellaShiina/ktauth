@@ -186,6 +186,13 @@ Manage IP blacklist/whitelist rules.
 | `POST` | `/api/ips/new` | Create new IP rule | `*` Administrator + Whitelist |
 | `DELETE` | `/api/ips` | Delete specified IP rule | `*` Administrator + Whitelist |
 
+## 📖 Developer Documentation
+
+For architecture, module reference, and extension guides, see:
+
+- [中文开发者文档](./DEVELOPER.md)
+- [English Developer Guide](./DEVELOPER_EN.md)
+
 ## 📂 Project Structure
 
 ```
@@ -194,7 +201,7 @@ ktauth/
 ├── init/               # Database initialization scripts
 ├── internal/
 │   ├── auth/           # Authentication logic (JWT)
-│   ├── db/             # Database connections (MySQL, Redis)
+│   ├── db/             # Database connections (PostgreSQL, Redis)
 │   ├── handler/        # HTTP Handlers (Controllers)
 │   ├── middleware/     # Gin Middlewares (Auth, RateLimit, IP Check)
 │   ├── model/          # Data models
