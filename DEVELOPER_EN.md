@@ -849,6 +849,12 @@ import (
 )
 ```
 
+## 15. Roadmap
+
+- [ ] Implement SMTP email verification code sending
+- [ ] Optimize session management
+- [ ] Administrator web panel
+
 ---
 
 ## Appendix: Quick Reference

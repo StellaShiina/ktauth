@@ -36,7 +36,6 @@ chmod +x ktauth.sh
 - **Database:** [PostgreSQL](https://www.postgresql.org/)
 - **Cache & Rate Limiting:** [Redis](https://redis.io/)
 - **Authentication:** [JWT (JSON Web Tokens)](https://jwt.io/)
-- **Email Service:** [Resend](https://resend.com/)
 - **Containerization:** Docker & Docker Compose
 - **Test:** Github Action + Go Testing
 
@@ -47,14 +46,13 @@ chmod +x ktauth.sh
 - **Flexible Endpoints:**
   - `GET /kt/0`: Rate limits blacklist/greylist, allows whitelist.
   - `GET /kt/1`: Whitelist access only.
-- **One-Command Deployment:** Support Docker Compose one-click deployment.(Please configure `resend.env`)
+- **One-Command Deployment:** Support Docker Compose one-click deployment.(Please configure `.env`)
 - `docker compose up -d`
 - **ktauth image:** [stellashiina/ktauth](https://hub.docker.com/r/stellashiina/ktauth)
 
 ### 🔐 Secure Authentication
 - **JWT Implementation:** Stateless authentication using JSON Web Tokens for secure API access.
 - **Session Management:** Robust session handling backed by Redis.
-- **Email Verification:** Integrated email verification flow using Resend for user registration.
 - **Password Security:** Secure password hashing using `bcrypt`.
 
 ### 🛡️ Access Control & Security
