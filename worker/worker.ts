@@ -3,7 +3,8 @@ export default {
         const url = new URL(request.url)
 
         if (url.pathname === "/") {
-            const isScriptHost = url.hostname.toLowerCase() === "ktauth.kaju.win"
+            const scriptHosts = new Set(["ktauth.kaju.win", "localhost", "127.0.0.1", "[::1]", "dev-ktauth.kaju.workers.dev"])
+            const isScriptHost = scriptHosts.has(url.hostname.toLowerCase())
 
             if (isScriptHost) {
                 url.pathname = "/install.sh"
