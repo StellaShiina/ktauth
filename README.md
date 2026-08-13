@@ -25,8 +25,6 @@ chmod +x ktauth.sh
 ./ktauth.sh update
 # update configuration
 ./ktauth.sh config
-# add acl whitlist
-./ktauth.sh allow
 ```
 
 ## 🚀 Tech Stack

@@ -25,8 +25,6 @@ chmod +x ktauth.sh
 ./ktauth.sh update
 # 配置参数
 ./ktauth.sh config
-# 增加白名单
-./ktauth.sh allow
 ```
 
 ## 🚀 技术栈 (Tech Stack)
