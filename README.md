@@ -25,8 +25,6 @@ chmod +x ktauth.sh
 ./ktauth.sh update
 # update configuration
 ./ktauth.sh config
-# add acl whitlist
-./ktauth.sh allow
 ```
 
 ## 🚀 Tech Stack
@@ -159,11 +157,15 @@ Handles user lifecycle and authentication.
 
 | Method | Path | Description | Access Control |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/api/users/register` | User Registration | Non-Blacklist + Rate Limiting |
+| `POST` | `/api/users/register` | Register with an invitation token or email code | Non-Blacklist + Rate Limiting |
+| `POST` | `/api/users/send-code` | Send an email verification code | Non-Blacklist + Rate Limiting |
+| `POST` | `/api/users/verify-code` | Verify and consume an email code | Non-Blacklist + Rate Limiting |
 | `POST` | `/api/users/login` | User Login | Non-Blacklist + Rate Limiting |
 | `GET` | `/api/users/auth` | Verify Login Status | Non-Blacklist + Rate Limiting + User |
 | `GET` | `/api/users/logout` | Logout of Current Session | Non-Blacklist + Rate Limiting + User |
 | `GET` | `/api/users` | Retrieve User List | `*` Administrator + Whitelist |
+
+Registration accepts either `token`, or both `email` and `code`. When both methods are provided, `token` takes precedence. Email codes expire after 15 minutes and are single-use; a successful `/verify-code` request also consumes the code.
 
 #### 🎫 Token Management
 Used to generate and manage registration invitation codes.

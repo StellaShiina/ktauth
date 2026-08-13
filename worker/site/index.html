@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="system">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#f2f0e9">
+  <meta name="description" content="KTAUTH 是一套轻量、自托管的网关访问控制服务：Forward Auth、IP 策略、滑动窗口限流与身份会话。">
+  <title>KTAUTH / Keep the gate simple.</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main" data-i18n="skip">跳至内容</a>
+
+  <header class="topbar">
+    <a class="wordmark" href="#top" aria-label="KTAUTH 首页">
+      <span class="wordmark-sign" aria-hidden="true">K</span>
+      <span>KTAUTH</span>
+    </a>
+
+    <div class="topbar-meta" aria-hidden="true">
+      <span>FORWARD / AUTH</span>
+      <span>GO · OSS · SELF-HOSTED</span>
+    </div>
+
+    <div class="topbar-actions">
+      <a class="icon-link" href="https://github.com/stellashiina/ktauth" target="_blank" rel="noreferrer" aria-label="GitHub" title="GitHub">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 22v-4c.1-1-.3-2-1-2.5 3.3-.4 6.8-1.6 6.8-7.3 0-1.6-.6-3-1.6-4.1.2-.4.7-2-.2-4.1 0 0-1.3-.4-4.4 1.6A15 15 0 0 0 8.6 1C5.5-.4 4.2 0 4.2 0c-.9 2.1-.4 3.7-.2 4.1a6 6 0 0 0-1.6 4.1c0 5.7 3.5 7 6.8 7.3-.4.4-.8 1.1-.9 2.1-.8.4-2.9 1.1-4.1-1.2 0 0-.7-1.3-2.2-1.4 0 0-1.4 0-.1.9 0 0 1 .5 1.7 2.2 0 0 .9 2.8 4.7 1.9V22"/></svg>
+      </a>
+      <button class="icon-button" id="theme-toggle" type="button" aria-label="切换主题" title="切换主题">
+        <svg class="theme-icon" viewBox="0 0 24 24" aria-hidden="true"></svg>
+      </button>
+      <button class="language-button" id="language-toggle" type="button" aria-label="Switch to English">EN</button>
+      <button class="menu-button" id="menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="打开菜单">
+        <span></span><span></span>
+      </button>
+    </div>
+
+    <nav id="site-nav" aria-label="主导航">
+      <a href="#start" data-i18n="navStart">开始使用</a>
+      <a href="#routes" data-i18n="navRoutes">双路由</a>
+      <a href="#inside" data-i18n="navInside">项目亮点</a>
+      <a href="#api" data-i18n="navApi">API</a>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section class="hero" id="top" aria-labelledby="hero-title">
+      <div class="hero-grid" aria-hidden="true"></div>
+      <div class="signal-field" aria-hidden="true">
+        <div class="signal-ring ring-one"></div>
+        <div class="signal-ring ring-two"></div>
+        <div class="signal-core"><span>204</span><small>ALLOW</small></div>
+        <span class="signal-dot dot-one"></span>
+        <span class="signal-dot dot-two"></span>
+        <span class="signal-dot dot-three"></span>
+      </div>
+
+      <p class="hero-kicker reveal">KANTAN AUTH <span>→</span> ACCESS CONTROL AT THE EDGE</p>
+      <div class="hero-title-wrap reveal">
+        <h1 id="hero-title" aria-label="KTAUTH"><span>KT</span><span>AUTH</span></h1>
+        <p class="hero-jp">簡単 <span>/ KANTAN</span></p>
+      </div>
+
+      <div class="hero-statement reveal">
+        <p class="hero-lead" data-i18n="heroLead">把复杂的访问判断，挡在应用之外。</p>
+        <p class="hero-sub" data-i18n="heroSub">一个轻量、自托管的认证与授权服务。为反向代理提供清晰的 Forward Auth、IP 策略、精确限流与身份会话。</p>
+        <a class="text-link" href="https://github.com/stellashiina/ktauth" target="_blank" rel="noreferrer">
+          <span data-i18n="viewSource">查看源代码</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
+      </div>
+
+      <div class="hero-index" aria-hidden="true">
+        <span>001</span>
+        <span>KTAUTH / 2026</span>
+      </div>
+      <div class="scroll-cue" aria-hidden="true"><span></span> SCROLL TO ROUTE</div>
+    </section>
+
+    <section class="command-section" id="start" aria-labelledby="start-title">
+      <div class="section-marker reveal"><span>01</span><span>DEPLOYMENT</span></div>
+      <div class="command-heading reveal">
+        <p class="overline" data-i18n="quickOverline">从这里开始 / ONE SCRIPT</p>
+        <h2 id="start-title" data-i18n="quickTitle">把入口交给<br>KTAUTH。</h2>
+        <p data-i18n="quickCopy">脚本会引导完成 Docker 检查、监听地址与核心凭据配置。选择动作，然后复制执行。</p>
+      </div>
+
+      <div class="command-console reveal" role="group" aria-labelledby="command-label">
+        <div class="command-tabs" role="tablist" aria-label="脚本操作">
+          <button id="tab-install" role="tab" aria-selected="true" aria-controls="command-code" data-command="install" data-i18n="install">安装</button>
+          <button role="tab" aria-selected="false" aria-controls="command-code" data-command="uninstall" data-i18n="uninstall">卸载</button>
+          <button role="tab" aria-selected="false" aria-controls="command-code" data-command="update" data-i18n="update">更新</button>
+          <button role="tab" aria-selected="false" aria-controls="command-code" data-command="config" data-i18n="config">配置</button>
+        </div>
+        <div class="command-code-wrap">
+          <span class="shell-mark" aria-hidden="true">$</span>
+          <code id="command-code" role="tabpanel" aria-live="polite">bash &lt;(curl -fsSL https://ktauth.kaju.win) install</code>
+          <button class="copy-button" type="button" aria-label="复制命令" title="复制命令">
+            <svg class="copy-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="1"/><path d="M16 8V4H4v12h4"/></svg>
+            <svg class="check-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>
+          </button>
+        </div>
+        <div class="command-foot">
+          <span>LINUX / ROOT</span>
+          <span>DOCKER COMPOSE</span>
+          <span data-i18n="interactive">交互式配置</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="routes-section" id="routes" aria-labelledby="routes-title">
+      <div class="routes-intro reveal">
+        <div class="section-marker light"><span>02</span><span>TWO GATES</span></div>
+        <p class="overline" data-i18n="routesOverline">两条路由，清晰决策</p>
+        <h2 id="routes-title" data-i18n="routesTitle">让每个请求<br>走对入口。</h2>
+      </div>
+
+      <div class="route-stage" aria-label="核心认证端点">
+        <article class="route route-zero reveal">
+          <div class="route-top"><span>GENERAL GATE</span><span class="live-dot"></span></div>
+          <p class="route-method">GET</p>
+          <h3>/kt/0</h3>
+          <p data-i18n="routeZero">综合入口。拒绝黑名单，对非白名单请求执行滑动窗口限流。</p>
+          <div class="route-tags"><span data-i18n="blackReject">黑名单拒绝</span><span data-i18n="rateControlled">流量受控</span></div>
+        </article>
+        <div class="route-line" aria-hidden="true">
+          <span>REQUEST</span>
+          <i></i>
+          <strong>K</strong>
+          <i></i>
+          <span>204</span>
+        </div>
+        <article class="route route-one reveal">
+          <div class="route-top"><span>STRICT GATE</span><span class="live-dot"></span></div>
+          <p class="route-method">GET</p>
+          <h3>/kt/1</h3>
+          <p data-i18n="routeOne">严格入口。只允许白名单来源，适合管理面与内部服务。</p>
+          <div class="route-tags"><span data-i18n="whiteOnly">仅白名单</span><span data-i18n="adminReady">管理面就绪</span></div>
+        </article>
+      </div>
+      <p class="route-caption reveal" data-i18n="routeCaption">成功即返回 204。可直接接入 Caddy forward_auth 或 Nginx auth_request。</p>
+    </section>
+
+    <section class="features-section" id="inside" aria-labelledby="features-title">
+      <div class="feature-head reveal">
+        <div class="section-marker"><span>03</span><span>UNDER THE HOOD</span></div>
+        <p class="overline" data-i18n="insideOverline">小体积，不是小能力</p>
+        <h2 id="features-title" data-i18n="insideTitle">在一道门后，<br>做足关键判断。</h2>
+      </div>
+
+      <div class="feature-composition">
+        <article class="feature feature-acl reveal">
+          <span class="feature-no">A / 01</span>
+          <div class="feature-graphic acl-graphic" aria-hidden="true"><span></span><span></span><span></span><i></i></div>
+          <h3 data-i18n="aclTitle">IP 策略缓存</h3>
+          <p data-i18n="aclCopy">白、灰、黑名单覆盖单个 IPv4 与 IPv6 /64；Redis 缓存让入口判断保持迅速。</p>
+        </article>
+
+        <article class="feature feature-rate reveal">
+          <span class="feature-no">A / 02</span>
+          <div class="feature-graphic rate-graphic" aria-hidden="true">
+            <span style="--h:28%"></span><span style="--h:46%"></span><span style="--h:38%"></span><span style="--h:72%"></span><span style="--h:56%"></span><span style="--h:88%"></span><i></i>
+          </div>
+          <h3 data-i18n="rateTitle">毫秒级滑动窗口</h3>
+          <p data-i18n="rateCopy">Redis Lua 与 Sorted Set 原子计算请求窗口，精确控制突发流量与持续滥用。</p>
+        </article>
+
+        <article class="feature feature-identity reveal">
+          <span class="feature-no">A / 03</span>
+          <div class="feature-graphic identity-graphic" aria-hidden="true"><strong>JWT</strong><span></span><small>SESSION / REDIS</small></div>
+          <h3 data-i18n="identityTitle">完整身份闭环</h3>
+          <p data-i18n="identityCopy">邀请码或邮箱验证码注册，bcrypt 密码哈希，JWT 与可撤销 Redis 会话协作。</p>
+        </article>
+
+        <article class="feature feature-architecture reveal">
+          <span class="feature-no">A / 04</span>
+          <div class="architecture-list" aria-hidden="true">
+            <span>HANDLER</span><i>→</i><span>SERVICE</span><i>→</i><span>REPOSITORY</span><i>→</i><span>DB</span>
+          </div>
+          <h3 data-i18n="architectureTitle">干净的 Go 内核</h3>
+          <p data-i18n="architectureCopy">Gin 驱动的分层架构，PostgreSQL 持久化，Redis 承担高速状态；边界明确，便于阅读与扩展。</p>
+        </article>
+      </div>
+
+      <div class="stack-ticker" aria-label="技术栈">
+        <div><span>GO</span><i>+</i><span>GIN</span><i>+</i><span>POSTGRESQL</span><i>+</i><span>REDIS</span><i>+</i><span>DOCKER</span><i>+</i><span>JWT</span><i>+</i></div>
+        <div aria-hidden="true"><span>GO</span><i>+</i><span>GIN</span><i>+</i><span>POSTGRESQL</span><i>+</i><span>REDIS</span><i>+</i><span>DOCKER</span><i>+</i><span>JWT</span><i>+</i></div>
+      </div>
+    </section>
+
+    <section class="api-section" id="api" aria-labelledby="api-title">
+      <div class="api-intro reveal">
+        <div class="section-marker"><span>04</span><span>REFERENCE</span></div>
+        <p class="overline" data-i18n="apiOverline">需要时，再深入</p>
+        <h2 id="api-title" data-i18n="apiTitle">API，保持<br>简洁可查。</h2>
+        <p data-i18n="apiCopy">这里只列出接口与职责。请求结构和完整技术细节请前往 GitHub 文档。</p>
+      </div>
+
+      <div class="api-disclosure reveal">
+        <button class="api-toggle" type="button" aria-expanded="false" aria-controls="api-panel">
+          <span><small data-i18n="apiLabel">端点索引</small><strong data-i18n="showEndpoints">展开全部端点</strong></span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+        <div class="api-panel" id="api-panel" hidden>
+          <div class="api-group">
+            <h3 data-i18n="users">用户 / USERS</h3>
+            <ul>
+              <li><b>POST</b><code>/api/users/register</code><span data-i18n="epRegister">邀请码或邮箱注册</span></li>
+              <li><b>POST</b><code>/api/users/send-code</code><span data-i18n="epSend">发送邮箱验证码</span></li>
+              <li><b>POST</b><code>/api/users/verify-code</code><span data-i18n="epVerify">验证并消费验证码</span></li>
+              <li><b>POST</b><code>/api/users/login</code><span data-i18n="epLogin">用户登录</span></li>
+              <li><b>GET</b><code>/api/users/auth</code><span data-i18n="epAuth">检查登录状态</span></li>
+              <li><b>GET</b><code>/api/users/logout</code><span data-i18n="epLogout">结束当前会话</span></li>
+              <li><b>GET</b><code>/api/users</code><span data-i18n="epUsers">用户列表 · 管理员</span></li>
+            </ul>
+          </div>
+          <div class="api-group">
+            <h3 data-i18n="tokens">令牌 / TOKENS</h3>
+            <ul>
+              <li><b>GET</b><code>/api/tokens/restock</code><span data-i18n="epRestock">批量生成邀请码</span></li>
+              <li><b>DELETE</b><code>/api/tokens/flush</code><span data-i18n="epFlush">清空可用邀请码</span></li>
+              <li><b>GET</b><code>/api/tokens</code><span data-i18n="epToken">获取一个邀请码</span></li>
+              <li><b>GET</b><code>/api/tokens/all</code><span data-i18n="epTokens">全部邀请码</span></li>
+            </ul>
+          </div>
+          <div class="api-group">
+            <h3 data-i18n="policies">策略 / IP RULES</h3>
+            <ul>
+              <li><b>GET</b><code>/api/ips</code><span data-i18n="epIps">列出 IP 规则</span></li>
+              <li><b>POST</b><code>/api/ips/new</code><span data-i18n="epIpsNew">创建 IP 规则</span></li>
+              <li><b>DELETE</b><code>/api/ips</code><span data-i18n="epIpsDelete">删除 IP 规则</span></li>
+            </ul>
+          </div>
+          <a class="api-doc-link" href="https://github.com/stellashiina/ktauth#-usage" target="_blank" rel="noreferrer">
+            <span data-i18n="fullDocs">在 GitHub 阅读完整文档</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section class="closing" aria-labelledby="closing-title">
+      <div class="closing-orbit" aria-hidden="true"><span>K</span></div>
+      <p class="overline">OPEN SOURCE / MIT LICENSE</p>
+      <h2 id="closing-title" data-i18n="closingTitle">守住入口。<br>专注你的应用。</h2>
+      <div class="closing-links">
+        <a href="https://github.com/stellashiina/ktauth" target="_blank" rel="noreferrer">PROJECT / GITHUB <span>↗</span></a>
+        <a href="https://github.com/stellashiina" target="_blank" rel="noreferrer">STELLA SHIINA / GITHUB <span>↗</span></a>
+        <a href="https://niji.party" target="_blank" rel="noreferrer">NIJI.PARTY <span>↗</span></a>
+        <a href="mailto:contact@niji.party">CONTACT@NIJI.PARTY <span>↗</span></a>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <a class="wordmark footer-wordmark" href="#top"><span class="wordmark-sign">K</span><span>KTAUTH</span></a>
+    <p data-i18n="footerLine">简单认证，清晰边界。</p>
+    <p>© <span id="year"></span> STELLA SHIINA · MIT</p>
+  </footer>
+
+  <div class="toast" role="status" aria-live="polite" data-i18n="copied">命令已复制</div>
+  <script src="/site.js" defer></script>
+</body>
+</html>

@@ -328,18 +328,25 @@ Abuse 检测使用 Redis INCR + EXPIRE 模式：
 - 默认：5 分钟内收到 100 次 429 → 触发自动封禁
 - 触发后自动清除计数 Key，下次重新计数
 
-### 5.5 Token 邀请码体系
+### 5.5 注册凭据体系
 
 ```
 注册流程：
   POST /api/users/register { token, user, password }
     │
-    ├─► ConsumeTokenService.Consume(token)
+    ├─ token 非空 ► ConsumeTokenService.Consume(token)
     │     └─► Redis SREM "admin:tokens" token
     │           成功（n > 0）→ Token 有效，已消费
     │           失败（n = 0）→ Token 无效或已被使用
     │
+    ├─ 无 token ► EmailService.VerifyCode(email, code)
+    │     └─► Redis GETDEL "register:{email}:{code}"
+    │           成功 → 验证码有效，已消费
+    │           失败 → 验证码无效或已被使用
+    │
     └─► AccountService.NewUser() → PostgreSQL INSERT
+
+同时提供 token 和邮箱验证码时，优先验证 token。
 
 管理员操作：
   GET  /api/tokens/restock  → 批量生成 10 个 UUID Token 到 Redis Set
@@ -364,6 +371,11 @@ Abuse 检测使用 Redis INCR + EXPIRE 模式：
 | `ABUSELIMIT` | `100` | 触发自动封禁的 429 次数阈值 |
 | `ABUSEWINDOW` | `5` | Abuse 检测时间窗口（分钟） |
 | `LOGLEVEL` | `error` | 日志级别：`debug` / `info` / `warn` / `error` |
+| `SMTP_HOST` | - | SMTP 服务器主机名 |
+| `SMTP_PORT` | `587` | SMTP Submission 端口 |
+| `SMTP_USERNAME` | - | SMTP 登录用户名；留空则不认证 |
+| `SMTP_PASSWORD` | - | SMTP 登录密码 |
+| `SMTP_FROM` | - | 发件人地址，可使用 `KTAUTH <ktauth@example.com>` 格式 |
 | `REDIS_HOST` | `127.0.0.1` | Redis 连接地址 |
 | `POSTGRES_HOST` | `127.0.0.1` | PostgreSQL 连接地址 |
 | `POSTGRES_PORT` | `5432` | PostgreSQL 端口 |
@@ -438,7 +450,8 @@ WHERE version = $1 AND $2::inet <<= ip_range
 | `ratelimit:ip:{cidr}` | ZSET | member(UUID) → score(ms) | 窗口大小 | 滑动窗口计数 |
 | `abuse:429:{cidr}` | String (counter) | 计数值 | ABUSEWINDOW | Abuse 检测 |
 | `admin:tokens` | Set | UUID strings | 永久 | 注册邀请码池 |
-| `register:{email}:{code}` | String | "" | 15min | 邮箱验证码（待启用） |
+| `register:{email}:{code}` | String | "" | 15min | 一次性邮箱验证码 |
+| `{email}` | String | "" | 1min | 邮箱验证码发送冷却 |
 
 ---
 
@@ -455,7 +468,9 @@ WHERE version = $1 AND $2::inet <<= ip_range
 
 | 方法 | 路径 | 鉴权 | 说明 |
 |------|------|------|------|
-| `POST` | `/api/users/register` | Token | 用户注册（需邀请码） |
+| `POST` | `/api/users/register` | Token 或邮箱验证码 | 用户注册；同时提供时优先 Token |
+| `POST` | `/api/users/send-code` | 无 | 发送 6 位邮箱验证码 |
+| `POST` | `/api/users/verify-code` | 无 | 验证并消费邮箱验证码 |
 | `POST` | `/api/users/login` | 无 | 用户登录，返回 JWT |
 | `GET` | `/api/users/auth` | Bearer JWT | 验证登录状态，`204` 表示有效 |
 | `GET` | `/api/users/logout` | Bearer JWT | 登出当前会话 |
@@ -464,11 +479,23 @@ WHERE version = $1 AND $2::inet <<= ip_range
 **注册请求体：**
 ```json
 {
-  "token": "uuid-token",
   "user": "username",
   "password": "password",
-  "email": "optional@example.com"
+  "email": "user@example.com",
+  "code": "123456"
 }
+```
+
+也可使用邀请码，将 `email`、`code` 替换为 `"token": "uuid-token"`；如果同时提供，优先验证 `token`。验证码有效期为 15 分钟且只能使用一次，独立验证接口成功后也会消费验证码。
+
+**发送验证码请求体：**
+```json
+{ "email": "user@example.com" }
+```
+
+**独立验证请求体：**
+```json
+{ "email": "user@example.com", "code": "123456" }
 ```
 
 **登录请求体：**
@@ -799,14 +826,9 @@ g := r.Group("/api/xxx", myMiddleware.Handle())  // 分组应用
 3. 传递给需要的 Service/Middleware
 4. 更新本文档的「配置」章节
 
-### 13.4 添加邮件验证功能
+### 13.4 邮箱验证实现
 
-项目中已预留 `RegisterRepo`（邮箱验证码存储），启用步骤：
-
-1. 在 `handler/user_handler.go` 的 `RegisterUser` 中取消注释
-2. 添加邮件发送 Service（使用 Resend / SendGrid API）
-3. 在 `main.go` 中注入 `RegisterRepo` 和相关 Service
-4. 添加 `/api/users/send-code` 和 `/api/users/verify-code` 端点
+`EmailService` 使用 Go 标准库 `net/smtp` 发送 HTML 邮件。验证码由 `crypto/rand` 生成，存入 Redis 15 分钟，并通过 `CountDownRepo` 限制同一邮箱每分钟发送一次。验证码使用 `GETDEL` 原子验证并消费。
 
 ---
 
@@ -852,7 +874,7 @@ import (
 
 ## 15. 路线图
 
-- [ ] 实现SMTP邮箱验证码发送
+- [x] 实现SMTP邮箱验证码发送与注册验证
 - [ ] 优化session管理
 - [ ] 管理员web面板
 

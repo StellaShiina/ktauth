@@ -11,6 +11,8 @@ import (
 func RegisterUserRouter(r *gin.Engine, h *handler.UserHandler, aclm *middleware.CheckIPMiddleware, m *middleware.AuthMiddleWare, rm *middleware.RateLimitMiddleware) {
 	r.POST("/api/users/register", aclm.ACL(0), rm.RateLimit(), h.RegisterUser)
 	r.POST("/api/users/login", aclm.ACL(0), rm.RateLimit(), h.LoginUser)
+	r.POST("/api/users/send-code", aclm.ACL(0), rm.RateLimit(), h.SendEmailCode)
+	r.POST("/api/users/verify-code", aclm.ACL(0), rm.RateLimit(), h.VerifyEmailCode)
 	user := r.Group("/api/users", aclm.ACL(0), m.VerifySession(""))
 	{
 		user.GET("/auth", func(ctx *gin.Context) { ctx.Status(http.StatusNoContent) })

@@ -25,8 +25,6 @@ chmod +x ktauth.sh
 ./ktauth.sh update
 # 配置参数
 ./ktauth.sh config
-# 增加白名单
-./ktauth.sh allow
 ```
 
 ## 🚀 技术栈 (Tech Stack)
@@ -159,11 +157,15 @@ cp .env.example .env && docker compose up -d
 
 | 方法 | 路径 | 描述 | 权限控制 |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/api/users/register` | 用户注册 | 非黑名单 + 限速 |
+| `POST` | `/api/users/register` | 使用邀请码或邮箱验证码注册 | 非黑名单 + 限速 |
+| `POST` | `/api/users/send-code` | 发送邮箱验证码 | 非黑名单 + 限速 |
+| `POST` | `/api/users/verify-code` | 单独验证并消费邮箱验证码 | 非黑名单 + 限速 |
 | `POST` | `/api/users/login` | 用户登录 | 非黑名单 + 限速 |
 | `GET` | `/api/users/auth` | 验证登录状态 | 非黑名单 + 限速 + 用户 |
 | `GET` | `/api/users/logout` | 登出当前会话 | 非黑名单 + 限速 + 用户 |
 | `GET` | `/api/users` | 获取用户列表 | `*` 管理员 + 白名单 |
+
+注册时可提交 `token`，或提交 `email` 与 `code`。同时提供两种凭据时优先验证 `token`。邮箱验证码有效期为 15 分钟且只能使用一次；调用 `/verify-code` 验证成功也会消费验证码。
 
 #### 🎫 令牌管理
 用于生成和管理注册邀请码。

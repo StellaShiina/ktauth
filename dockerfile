@@ -1,4 +1,4 @@
-FROM golang:1.26.2-alpine3.23 AS builder
+FROM golang:alpine AS builder
 
 WORKDIR /usr/src/app
 
@@ -10,7 +10,7 @@ COPY . .
 
 RUN go build -v -o /usr/local/bin/ktauth ./cmd/ktauth/main.go
 
-FROM alpine:3.23
+FROM alpine:latest
 
 COPY --from=builder /usr/local/bin/ktauth /ktauth
 
