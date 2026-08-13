@@ -210,8 +210,14 @@ footer p { margin: 0; color: color-mix(in srgb, var(--dark-ink) 58%, transparent
 footer p:last-child { text-align: right; }
 .footer-wordmark .wordmark-sign { background: var(--accent); color: #fff; }
 
-.toast { position: fixed; z-index: 50; right: 22px; bottom: 22px; padding: 12px 16px; transform: translateY(20px); opacity: 0; background: var(--ink); color: var(--paper); font-family: "DM Mono", monospace; font-size: 10px; pointer-events: none; transition: .2s ease; }
+.toast { position: fixed; z-index: 50; right: 84px; bottom: 22px; padding: 12px 16px; transform: translateY(20px); opacity: 0; background: var(--ink); color: var(--paper); font-family: "DM Mono", monospace; font-size: 10px; pointer-events: none; transition: .2s ease; }
 .toast.visible { transform: none; opacity: 1; }
+.back-to-top { position: fixed; z-index: 40; right: var(--gutter); bottom: 24px; display: grid; width: 48px; height: 48px; place-items: center; padding: 0; transform: translateY(12px); opacity: 0; border: 1px solid var(--ink); background: var(--paper-raised); color: var(--ink); cursor: pointer; pointer-events: none; transition: opacity .2s ease, transform .2s ease, background-color .2s ease, color .2s ease; }
+.back-to-top.visible { transform: none; opacity: 1; pointer-events: auto; }
+.back-to-top:hover, .back-to-top:focus-visible { background: var(--ink); color: var(--paper); }
+.back-to-top:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.back-to-top svg { width: 17px; height: 17px; }
+.back-to-top span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .reveal { transform: translateY(22px); opacity: 0; transition: opacity .7s ease, transform .7s cubic-bezier(.2,.8,.2,1); }
 .reveal.is-visible { transform: none; opacity: 1; }
 
@@ -291,6 +297,8 @@ footer p:last-child { text-align: right; }
   .closing-orbit { right: -50%; width: 120vw; opacity: .5; }
   footer { grid-template-columns: 1fr 1fr; min-height: 130px; }
   footer p:nth-child(2) { display: none; }
+  .back-to-top { right: 20px; bottom: 18px; }
+  .toast { right: 76px; bottom: 18px; }
 }
 
 @media (max-width: 390px) {

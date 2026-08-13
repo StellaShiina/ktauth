@@ -6,6 +6,7 @@ const nav = document.querySelector("#site-nav")
 const commandCode = document.querySelector("#command-code")
 const copyButton = document.querySelector(".copy-button")
 const toast = document.querySelector(".toast")
+const backToTop = document.querySelector("#back-to-top")
 
 const commandBase = "bash <(curl -fsSL https://ktauth.kaju.win)"
 const translations = {
@@ -30,7 +31,7 @@ const translations = {
     apiLabel: "ENDPOINT INDEX", showEndpoints: "Reveal all endpoints", hideEndpoints: "Hide all endpoints", users: "USERS", tokens: "TOKENS", policies: "IP RULES",
     epRegister: "Invite or email registration", epSend: "Send email code", epVerify: "Verify and consume code", epLogin: "Sign in", epAuth: "Check session", epLogout: "End current session", epUsers: "User list · admin",
     epRestock: "Generate invite batch", epFlush: "Clear available invites", epToken: "Get one invite", epTokens: "List all invites", epIps: "List IP rules", epIpsNew: "Create IP rule", epIpsDelete: "Delete IP rule",
-    fullDocs: "Read the full documentation on GitHub", closingTitle: "Guard the gate.<br>Build what matters.", footerLine: "Simple auth. Clear boundaries.", copied: "Command copied"
+    fullDocs: "Read the full documentation on GitHub", closingTitle: "Guard the gate.<br>Build what matters.", footerLine: "Simple auth. Clear boundaries.", copied: "Command copied", topLabel: "Top"
   },
   zh: {
     skip: "跳至内容", navStart: "开始使用", navRoutes: "双路由", navInside: "项目亮点", navApi: "API",
@@ -45,7 +46,7 @@ const translations = {
     apiOverline: "需要时，再深入", apiTitle: "API，保持<br>简洁可查。", apiCopy: "这里只列出接口与职责。请求结构和完整技术细节请前往 GitHub 文档。", apiLabel: "端点索引", showEndpoints: "展开全部端点", hideEndpoints: "收起全部端点",
     users: "用户 / USERS", tokens: "令牌 / TOKENS", policies: "策略 / IP RULES", epRegister: "邀请码或邮箱注册", epSend: "发送邮箱验证码", epVerify: "验证并消费验证码", epLogin: "用户登录", epAuth: "检查登录状态", epLogout: "结束当前会话", epUsers: "用户列表 · 管理员",
     epRestock: "批量生成邀请码", epFlush: "清空可用邀请码", epToken: "获取一个邀请码", epTokens: "全部邀请码", epIps: "列出 IP 规则", epIpsNew: "创建 IP 规则", epIpsDelete: "删除 IP 规则",
-    fullDocs: "在 GitHub 阅读完整文档", closingTitle: "守住入口。<br>专注你的应用。", footerLine: "简单认证，清晰边界。", copied: "命令已复制"
+    fullDocs: "在 GitHub 阅读完整文档", closingTitle: "守住入口。<br>专注你的应用。", footerLine: "简单认证，清晰边界。", copied: "命令已复制", topLabel: "顶部"
   }
 }
 
@@ -130,6 +131,14 @@ async function copyCommand() {
 }
 
 copyButton.addEventListener("click", copyCommand)
+
+function updateBackToTop() {
+  backToTop.classList.toggle("visible", window.scrollY > window.innerHeight * 0.72)
+}
+
+backToTop.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }))
+window.addEventListener("scroll", updateBackToTop, { passive: true })
+updateBackToTop()
 
 const apiToggle = document.querySelector(".api-toggle")
 const apiPanel = document.querySelector("#api-panel")
