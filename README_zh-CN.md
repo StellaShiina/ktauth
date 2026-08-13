@@ -31,7 +31,7 @@ chmod +x ktauth.sh
 
 ## 🚀 技术栈 (Tech Stack)
 
-- **开发语言:** [Go 1.25+](https://go.dev/)
+- **开发语言:** [Go](https://go.dev/)
 - **Web 框架:** [Gin](https://github.com/gin-gonic/gin)
 - **数据库:** [PostgreSQL](https://www.postgresql.org/)
 - **缓存 & 限流:** [Redis](https://redis.io/)

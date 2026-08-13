@@ -31,7 +31,7 @@ chmod +x ktauth.sh
 
 ## 🚀 Tech Stack
 
-- **Language:** [Go 1.25+](https://go.dev/)
+- **Language:** [Go](https://go.dev/)
 - **Web Framework:** [Gin](https://github.com/gin-gonic/gin)
 - **Database:** [PostgreSQL](https://www.postgresql.org/)
 - **Cache & Rate Limiting:** [Redis](https://redis.io/)
