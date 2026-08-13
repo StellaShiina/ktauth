@@ -1,12 +1,11 @@
 export default {
     async fetch(request: Request, env: any): Promise<Response> {
         const url = new URL(request.url)
-        const ua = request.headers.get("user-agent") || ""
 
         if (url.pathname === "/") {
-            const isCli = /curl|wget|httpie/i.test(ua)
+            const isScriptHost = url.hostname.toLowerCase() === "ktauth.kaju.win"
 
-            if (isCli) {
+            if (isScriptHost) {
                 url.pathname = "/install.sh"
             } else {
                 url.pathname = "/index.html"
