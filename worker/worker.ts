@@ -8,8 +8,6 @@ export default {
 
             if (isScriptHost) {
                 url.pathname = "/install.sh"
-            } else {
-                url.pathname = "/index.html"
             }
         }
 
