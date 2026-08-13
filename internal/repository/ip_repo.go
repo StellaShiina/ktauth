@@ -72,10 +72,21 @@ func (r *IPRepo) QueryIP(ctx context.Context, version int16, clientIP net.IP) (b
 	return isWhitelist, nil
 }
 
-func (r *IPRepo) GetIPs(ctx context.Context) ([]model.IP, error) {
+// Query version *int16, isWhiteList *bool if needed
+func (r *IPRepo) GetIPs(ctx context.Context, version *int16, isWhiteList *bool) ([]model.IP, error) {
 	var ips []model.IP
+	var rows pgx.Rows
+	var err error
 
-	rows, err := r.pool.Query(ctx, "SELECT * FROM ip")
+	if version != nil && isWhiteList != nil {
+		rows, err = r.pool.Query(ctx, "SELECT * FROM ip WHERE version = $1 AND is_whitelist = $2", *version, *isWhiteList)
+	} else if version != nil {
+		rows, err = r.pool.Query(ctx, "SELECT * FROM ip WHERE version = $1", *version)
+	} else if isWhiteList != nil {
+		rows, err = r.pool.Query(ctx, "SELECT * FROM ip WHERE is_whitelist = $1", *isWhiteList)
+	} else {
+		rows, err = r.pool.Query(ctx, "SELECT * FROM ip")
+	}
 
 	if err != nil {
 		slog.Error("GetIPs error: " + err.Error())
@@ -95,4 +106,26 @@ func (r *IPRepo) GetIPs(ctx context.Context) ([]model.IP, error) {
 		return nil, fmt.Errorf("GetIPs error %w", err)
 	}
 	return ips, nil
+}
+
+func (r *IPRepo) UpdateIP(ctx context.Context, id int, isWhiteList bool, note *string) (model.IP, error) {
+	var ip model.IP
+	sql := `
+		UPDATE ip
+		SET is_whitelist = $1, note = $2
+		WHERE id = $3
+		RETURNING *
+	`
+
+	err := r.pool.QueryRow(ctx, sql, isWhiteList, note, id).Scan(&ip.ID, &ip.Version, &ip.IPRange, &ip.IsWhitelist, &ip.CreateAt, &ip.UpdateAt, &ip.Note)
+
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return ip, ErrIPNotFound
+		}
+		slog.Error("UpdateIP eeror: " + err.Error())
+		return ip, fmt.Errorf("Error when updating: %w", err)
+	}
+
+	return ip, nil
 }

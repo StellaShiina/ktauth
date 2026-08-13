@@ -14,8 +14,9 @@ import (
 var ipe *iputils.IPError
 
 type rule struct {
-	IP   string  `json:"ip"`
-	Note *string `json:"note"`
+	IP          string  `json:"ip"`
+	Note        *string `json:"note"`
+	IsWhiteList *bool   `json:"isWhiteList"`
 }
 
 type IPRuleHandler struct {
@@ -42,8 +43,8 @@ func (h *IPRuleHandler) AddRule(c *gin.Context) {
 	}
 
 	var isWhiteList bool
-	isBan := c.Query("ban")
-	if isBan != "" {
+	isBan := c.Query("ban") // legacy, may be removed in future
+	if isBan != "" || (json.IsWhiteList != nil && *json.IsWhiteList == false) {
 		isWhiteList = false
 	} else {
 		isWhiteList = true
@@ -68,7 +69,27 @@ func (h *IPRuleHandler) AddRule(c *gin.Context) {
 }
 
 func (h *IPRuleHandler) ListRules(c *gin.Context) {
-	rules, err := h.adminIPRuleService.ListRules(c.Request.Context())
+	var version *int16
+	var isWhiteList *bool
+	versionStr := c.Query("version")
+	typeStr := c.Query("type")
+	switch versionStr {
+	case "4":
+		versionInt := int16(4)
+		version = &versionInt
+	case "6":
+		versionInt := int16(6)
+		version = &versionInt
+	}
+	switch typeStr {
+	case "white":
+		typeBool := true
+		isWhiteList = &typeBool
+	case "black":
+		typeBool := false
+		isWhiteList = &typeBool
+	}
+	rules, err := h.adminIPRuleService.ListRules(c.Request.Context(), version, isWhiteList)
 	if err != nil {
 		c.String(http.StatusInternalServerError, "Server error...")
 		return

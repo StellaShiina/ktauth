@@ -36,7 +36,6 @@ chmod +x ktauth.sh
 - **数据库:** [PostgreSQL](https://www.postgresql.org/)
 - **缓存 & 限流:** [Redis](https://redis.io/)
 - **认证方式:** [JWT (JSON Web Tokens)](https://jwt.io/)
-- **邮件服务:** [Resend](https://resend.com/)
 - **容器化:** Docker & Docker Compose
 - **测试:** Github action + Go Testing
 
@@ -47,14 +46,13 @@ chmod +x ktauth.sh
 - `GET /kt/0` 对黑名单限速，灰名单限流，白名单放行
 - `GET /kt/1` 仅限白名单
 
-支持容器一键部署，安装好docker compose后一行指令完成部署（请配置`resend.env`）
+支持容器一键部署，安装好docker compose后一行指令完成部署（请配置`.env`）
 - `docker compose up -d`
 - **ktauth image:** [stellashiina/ktauth](https://hub.docker.com/r/stellashiina/ktauth)
 
 ### 🔐 安全认证
 - **JWT 实现:** 使用 JSON Web Tokens 进行无状态认证，确保 API 访问安全。
 - **会话管理:** 基于 Redis 的稳健会话（Session）处理。
-- **邮件验证:** 集成 Resend 邮件服务，实现用户注册时的邮箱验证流程。
 - **密码安全:** 使用 `bcrypt` 进行安全的密码哈希存储。
 
 ### 🛡️ 访问控制与安全
@@ -185,6 +183,13 @@ cp .env.example .env && docker compose up -d
 | `GET` | `/api/ips` | 列出当前 IP 规则表 | `*` 管理员 + 白名单 |
 | `POST` | `/api/ips/new` | 新建 IP 规则 | `*` 管理员 + 白名单 |
 | `DELETE`| `/api/ips` | 删除指定 IP 规则 | `*` 管理员 + 白名单 |
+
+## 📖 开发者文档
+
+架构设计、模块说明与扩展指南请参见：
+
+- [中文开发者文档](./DEVELOPER.md)
+- [English Developer Guide](./DEVELOPER_EN.md)
 
 ## 📂 项目结构
 

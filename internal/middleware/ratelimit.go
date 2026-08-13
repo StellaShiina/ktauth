@@ -36,7 +36,7 @@ func (m *RateLimitMiddleware) RateLimit() gin.HandlerFunc {
 			c.Abort()
 			if abuse, err := m.rateLimitService.Abuse(c.Request.Context(), c.ClientIP()); err == nil {
 				if abuse {
-					note := "Abuse with too many 429"
+					note := "Abuse with too many 429. Host: " + c.Request.Host
 					cidr, err := m.adminIPRuleService.AddRule(c.Request.Context(), c.ClientIP(), false, &note)
 					if err != nil {
 						slog.Error("Add abuse IP to database failed", "error", err)

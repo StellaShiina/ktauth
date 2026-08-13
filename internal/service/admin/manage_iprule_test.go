@@ -52,7 +52,10 @@ func TestManageIPRule(t *testing.T) {
 	}
 
 	fmt.Println("ListRules test...")
-	_, err = s.ListRules(c)
+	version := int16(4)
+	isWhiteList := true
+
+	_, err = s.ListRules(c, &version, &isWhiteList)
 	if err != nil {
 		t.Fatal(err)
 	}

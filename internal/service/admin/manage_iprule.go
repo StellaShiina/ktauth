@@ -36,9 +36,9 @@ func (s *AdminIPRuleService) AddRule(c context.Context, ipStr string, isWhiteLis
 	return ipNet.String(), err
 }
 
-func (s *AdminIPRuleService) ListRules(c context.Context) ([]IPResponse, error) {
+func (s *AdminIPRuleService) ListRules(c context.Context, version *int16, isWhiteList *bool) ([]IPResponse, error) {
 	var ipres []IPResponse
-	data, err := s.ipRepo.GetIPs(c)
+	data, err := s.ipRepo.GetIPs(c, version, isWhiteList)
 	if err != nil {
 		return nil, err
 	}

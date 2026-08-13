@@ -19,7 +19,7 @@ func TestIPRepo(t *testing.T) {
 	c := context.Background()
 	IPRepo := repository.NewIPRepo(postgres)
 	fmt.Println("Test GetIPs")
-	_, err = IPRepo.GetIPs(c)
+	_, err = IPRepo.GetIPs(c, nil, nil)
 	if err != nil {
 		t.Error(err)
 		t.Fail()
@@ -40,6 +40,15 @@ func TestIPRepo(t *testing.T) {
 	err = IPRepo.AddIP(c, version, ipNet, true, &note)
 	if err != repository.ErrIPExist {
 		t.Fatal(err)
+	}
+
+	fmt.Println("Test UpdateIP")
+	ip, err := IPRepo.UpdateIP(c, 1, true, &note)
+	if err != nil {
+		t.Error(err)
+		t.Fail()
+	} else {
+		fmt.Println("Update", ip)
 	}
 
 	fmt.Println("Test QueryIP")
