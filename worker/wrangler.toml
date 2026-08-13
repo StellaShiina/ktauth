@@ -4,15 +4,17 @@ compatibility_date = "2026-04-22"
 
 [build]
 command = """
-mkdir -p scripts
-cp ../scripts/install.sh scripts/
-cp ../docker-compose.yaml scripts/
-cp ../sql/00-init.sql scripts/
-cp ../.env.example scripts/
+rm -rf dist
+mkdir -p dist
+cp -r site/. dist/
+cp ../scripts/install.sh dist/
+cp ../docker-compose.yaml dist/
+cp ../sql/00-init.sql dist/
+cp ../.env.example dist/
 """
 
 [assets]
-directory = "./scripts"
+directory = "./dist"
 binding = "ASSETS"
 not_found_handling = "404-page"
 

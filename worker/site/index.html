@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f7f8f6">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#111513">
+  <meta name="description" content="KTAUTH 是一个轻量、可自托管的认证与访问控制服务。">
+  <title>KTAUTH - 简单可靠的认证服务</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="KTAUTH 首页">
+      <span class="brand-mark" aria-hidden="true">K</span>
+      <span>KTAUTH</span>
+    </a>
+    <nav aria-label="主导航">
+      <a href="#features">特色</a>
+      <a href="#start">快速开始</a>
+      <a class="github-link" href="https://github.com/stellashiina/ktauth">GitHub</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero" aria-labelledby="hero-title">
+      <svg class="hero-network" viewBox="0 0 1440 720" role="img" aria-label="请求经过 KTAUTH 访问策略并抵达应用的流程示意">
+        <g class="network-lines" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M0 170 H230 Q270 170 270 210 V290 Q270 330 310 330 H610" />
+          <path d="M0 530 H190 Q230 530 230 490 V450 Q230 410 270 410 H610" />
+          <path d="M830 370 H1050 Q1090 370 1090 330 V250 Q1090 210 1130 210 H1440" />
+          <path d="M830 370 H1010 Q1050 370 1050 410 V510 Q1050 550 1090 550 H1440" />
+        </g>
+        <g class="network-nodes">
+          <circle cx="270" cy="250" r="5" class="node-green" />
+          <circle cx="230" cy="450" r="5" class="node-amber" />
+          <circle cx="1090" cy="250" r="5" class="node-green" />
+          <circle cx="1050" cy="470" r="5" class="node-red" />
+        </g>
+        <g class="network-core">
+          <rect x="610" y="292" width="220" height="156" rx="6" />
+          <path d="M700 326 L720 314 L740 326 V350 C740 368 728 382 720 386 C712 382 700 368 700 350 Z" />
+          <text x="720" y="418" text-anchor="middle">KTAUTH</text>
+        </g>
+      </svg>
+
+      <div class="hero-content">
+        <p class="eyebrow"><span></span> SELF-HOSTED ACCESS CONTROL</p>
+        <h1 id="hero-title">KTAUTH</h1>
+        <p class="hero-lead">把身份认证、IP 访问策略与请求限速集中在一个轻量服务里。</p>
+        <div class="hero-actions">
+          <a class="button primary" href="#start">开始部署</a>
+          <a class="button secondary" href="https://github.com/stellashiina/ktauth">查看源码</a>
+        </div>
+      </div>
+
+      <div class="status-strip" aria-label="项目能力概览">
+        <div><span class="status-dot green"></span><strong><span class="wide-label">Forward Auth</span><span class="short-label">鉴权</span></strong><small>网关即插即用</small></div>
+        <div><span class="status-dot amber"></span><strong><span class="wide-label">IP Policy</span><span class="short-label">策略</span></strong><small>黑白名单策略</small></div>
+        <div><span class="status-dot red"></span><strong><span class="wide-label">Rate Limit</span><span class="short-label">限速</span></strong><small>滥用自动阻断</small></div>
+      </div>
+    </section>
+
+    <section class="flow-section" aria-labelledby="flow-title">
+      <div class="section-heading">
+        <p class="section-index">01 / REQUEST FLOW</p>
+        <h2 id="flow-title">一次请求，清晰决策</h2>
+        <p>将访问判断留在入口，应用只处理已经通过的请求。</p>
+      </div>
+
+      <div class="flow-visual">
+        <svg viewBox="0 0 1120 390" role="img" aria-labelledby="flow-svg-title flow-svg-desc">
+          <title id="flow-svg-title">KTAUTH 请求处理流程</title>
+          <desc id="flow-svg-desc">请求依次经过 IP 规则、速率限制和身份会话检查，最终允许访问或拒绝。</desc>
+          <defs>
+            <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+              <path d="M0 0 L8 4 L0 8 Z" class="arrow-head" />
+            </marker>
+          </defs>
+          <g class="flow-paths" fill="none" stroke="currentColor" stroke-width="2" marker-end="url(#arrow)">
+            <path d="M180 195 H300" />
+            <path d="M500 195 H620" />
+            <path d="M820 195 H940" />
+          </g>
+          <g class="flow-step step-request">
+            <rect x="20" y="130" width="160" height="130" rx="6" />
+            <circle cx="56" cy="168" r="8" />
+            <text x="48" y="214">REQUEST</text>
+            <text class="flow-sub" x="48" y="236">来自网关的请求</text>
+          </g>
+          <g class="flow-step step-policy">
+            <rect x="300" y="110" width="200" height="170" rx="6" />
+            <text x="328" y="156">IP POLICY</text>
+            <text class="flow-sub" x="328" y="184">白名单 / 灰名单 / 黑名单</text>
+            <line x1="328" y1="210" x2="472" y2="210" />
+            <circle cx="340" cy="242" r="5" class="node-green" />
+            <circle cx="366" cy="242" r="5" class="node-amber" />
+            <circle cx="392" cy="242" r="5" class="node-red" />
+          </g>
+          <g class="flow-step step-rate">
+            <rect x="620" y="110" width="200" height="170" rx="6" />
+            <text x="648" y="156">RATE LIMIT</text>
+            <text class="flow-sub" x="648" y="184">滑动窗口与滥用检测</text>
+            <path d="M650 246 L674 224 L700 238 L730 194 L758 212 L790 172" fill="none" />
+          </g>
+          <g class="flow-step step-allow">
+            <rect x="940" y="130" width="160" height="130" rx="6" />
+            <path d="M972 166 L980 174 L994 158" fill="none" />
+            <text x="968" y="214">ALLOW</text>
+            <text class="flow-sub" x="968" y="236">进入你的应用</text>
+          </g>
+        </svg>
+      </div>
+    </section>
+
+    <section class="features-section" id="features" aria-labelledby="features-title">
+      <div class="section-heading">
+        <p class="section-index">02 / FEATURES</p>
+        <h2 id="features-title">刚好够用，保持专注</h2>
+      </div>
+
+      <div class="feature-grid">
+        <article>
+          <span class="feature-number">01</span>
+          <h3>网关友好</h3>
+          <p>提供简单明确的鉴权端点，可直接接入 Caddy、Nginx 等反向代理。</p>
+        </article>
+        <article>
+          <span class="feature-number">02</span>
+          <h3>访问策略</h3>
+          <p>通过 IP 黑白名单控制边界，让可信来源快速通过，异常来源及时阻断。</p>
+        </article>
+        <article>
+          <span class="feature-number">03</span>
+          <h3>精确限速</h3>
+          <p>按来源约束请求频率，并对持续滥用行为自动追加临时保护。</p>
+        </article>
+        <article>
+          <span class="feature-number">04</span>
+          <h3>两种注册方式</h3>
+          <p>按场景选择邀请 Token 或邮箱验证码，验证码邮件开箱即用。</p>
+        </article>
+        <article>
+          <span class="feature-number">05</span>
+          <h3>会话管理</h3>
+          <p>使用安全密码哈希与可撤销会话，在轻量和可控之间取得平衡。</p>
+        </article>
+        <article>
+          <span class="feature-number">06</span>
+          <h3>自托管</h3>
+          <p>数据留在自己的基础设施中，通过容器快速部署并独立运行。</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="registration-section" aria-labelledby="registration-title">
+      <div class="registration-copy">
+        <p class="section-index">03 / REGISTRATION</p>
+        <h2 id="registration-title">邀请制或邮箱验证，按需选择</h2>
+        <p>同一个注册入口支持两种可信凭据。邀请 Token 适合封闭场景，邮箱验证码适合开放注册。</p>
+        <div class="method-switch" aria-label="注册方式示意">
+          <span class="active">Email code</span>
+          <span>Invite token</span>
+        </div>
+      </div>
+
+      <div class="mail-preview" aria-label="验证码邮件模拟预览">
+        <div class="mail-toolbar">
+          <span></span><span></span><span></span>
+          <small>Inbox / KTAUTH</small>
+        </div>
+        <div class="mail-meta">
+          <strong>Verify your email address</strong>
+          <span>KTAUTH Security &lt;no-reply@example.com&gt;</span>
+        </div>
+        <div class="mail-body">
+          <span class="mini-brand">KTAUTH</span>
+          <p>Enter this verification code to complete your registration:</p>
+          <div class="verification-code">284 913</div>
+          <small>Valid for 15 minutes · Single use</small>
+        </div>
+      </div>
+    </section>
+
+    <section class="start-section" id="start" aria-labelledby="start-title">
+      <div class="section-heading">
+        <p class="section-index">04 / QUICK START</p>
+        <h2 id="start-title">一条命令，开始部署</h2>
+        <p>准备一台安装了 Docker 与 Docker Compose 的 Linux 主机。</p>
+      </div>
+
+      <div class="terminal" role="group" aria-label="安装命令">
+        <div class="terminal-bar">
+          <span>terminal</span>
+          <button class="copy-button" type="button" data-copy="bash <(curl -fsSL https://ktauth.kaju.win) install" aria-label="复制安装命令" title="复制安装命令">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            <span>复制</span>
+          </button>
+        </div>
+        <pre><code><span class="prompt">$</span> bash &lt;(curl -fsSL https://ktauth.kaju.win) install</code></pre>
+      </div>
+
+      <div class="start-notes">
+        <span><b>01</b> 运行安装脚本</span>
+        <span><b>02</b> 完成基础配置</span>
+        <span><b>03</b> 接入反向代理</span>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="brand footer-brand"><span class="brand-mark" aria-hidden="true">K</span><span>KTAUTH</span></div>
+    <p>简单、可控、自托管的访问认证。</p>
+    <div class="footer-links">
+      <a href="https://github.com/stellashiina/ktauth">GitHub</a>
+      <a href="https://hub.docker.com/r/stellashiina/ktauth">Docker Hub</a>
+      <a href="https://github.com/stellashiina/ktauth/blob/main/LICENSE">MIT License</a>
+    </div>
+  </footer>
+
+  <script src="/site.js" defer></script>
+</body>
+</html>
