@@ -327,18 +327,25 @@ Abuse detection uses Redis INCR + EXPIRE:
 - Default: 100 × 429 within 5 minutes → triggers auto-ban
 - After trigger, the counter key is automatically deleted; next detection starts fresh
 
-### 5.5 Token Invitation System
+### 5.5 Registration Credential System
 
 ```
 Registration Flow:
   POST /api/users/register { token, user, password }
     │
-    ├─► ConsumeTokenService.Consume(token)
+    ├─ non-empty token ► ConsumeTokenService.Consume(token)
     │     └─► Redis SREM "admin:tokens" token
     │           Success (n > 0) → Token valid, consumed
     │           Failure (n = 0) → Token invalid or already used
     │
+    ├─ no token ► EmailService.VerifyCode(email, code)
+    │     └─► Redis GETDEL "register:{email}:{code}"
+    │           Success → Code valid, consumed
+    │           Failure → Code invalid or already used
+    │
     └─► AccountService.NewUser() → PostgreSQL INSERT
+
+When both methods are supplied, the token takes precedence.
 
 Admin Operations:
   GET   /api/tokens/restock  → Bulk-generate 10 UUID tokens into Redis Set
@@ -363,6 +370,11 @@ Admin Operations:
 | `ABUSELIMIT` | `100` | 429 count threshold for auto-ban |
 | `ABUSEWINDOW` | `5` | Abuse detection window (minutes) |
 | `LOGLEVEL` | `error` | Log level: `debug` / `info` / `warn` / `error` |
+| `SMTP_HOST` | - | SMTP server hostname |
+| `SMTP_PORT` | `587` | SMTP submission port |
+| `SMTP_USERNAME` | - | SMTP username; empty disables authentication |
+| `SMTP_PASSWORD` | - | SMTP password |
+| `SMTP_FROM` | - | Sender address; `KTAUTH <ktauth@example.com>` is supported |
 | `REDIS_HOST` | `127.0.0.1` | Redis host |
 | `POSTGRES_HOST` | `127.0.0.1` | PostgreSQL host |
 | `POSTGRES_PORT` | `5432` | PostgreSQL port |
@@ -437,7 +449,8 @@ WHERE version = $1 AND $2::inet <<= ip_range
 | `ratelimit:ip:{cidr}` | ZSET | member(UUID) → score(ms) | window size | Sliding window counter |
 | `abuse:429:{cidr}` | String (counter) | count | ABUSEWINDOW | Abuse detection |
 | `admin:tokens` | Set | UUID strings | ∞ | Registration invitation pool |
-| `register:{email}:{code}` | String | "" | 15min | Email verification code (reserved) |
+| `register:{email}:{code}` | String | "" | 15min | Single-use email verification code |
+| `{email}` | String | "" | 1min | Email code sending cooldown |
 
 ---
 
@@ -454,7 +467,9 @@ WHERE version = $1 AND $2::inet <<= ip_range
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `POST` | `/api/users/register` | Token | Register (requires invitation token) |
+| `POST` | `/api/users/register` | Token or email code | Register; token takes precedence when both are supplied |
+| `POST` | `/api/users/send-code` | None | Send a six-digit email verification code |
+| `POST` | `/api/users/verify-code` | None | Verify and consume an email code |
 | `POST` | `/api/users/login` | None | Login, returns JWT |
 | `GET` | `/api/users/auth` | Bearer JWT | Verify session, `204` = valid |
 | `GET` | `/api/users/logout` | Bearer JWT | Logout current session |
@@ -463,11 +478,23 @@ WHERE version = $1 AND $2::inet <<= ip_range
 **Register request body:**
 ```json
 {
-  "token": "uuid-token",
   "user": "username",
   "password": "password",
-  "email": "optional@example.com"
+  "email": "user@example.com",
+  "code": "123456"
 }
+```
+
+To use an invitation, replace `email` and `code` with `"token": "uuid-token"`. If both methods are supplied, `token` takes precedence. Codes expire after 15 minutes and are single-use; successful standalone verification also consumes the code.
+
+**Send-code request body:**
+```json
+{ "email": "user@example.com" }
+```
+
+**Standalone verification request body:**
+```json
+{ "email": "user@example.com", "code": "123456" }
 ```
 
 **Login request body:**
@@ -798,14 +825,9 @@ g := r.Group("/api/xxx", myMiddleware.Handle())  // Scoped
 3. Pass it to the Service/Middleware that needs it
 4. Update this document's configuration section
 
-### 13.4 Enabling Email Verification
+### 13.4 Email Verification Implementation
 
-The project already has `RegisterRepo` (email verification code storage) reserved. To activate:
-
-1. Uncomment related code in `handler/user_handler.go`'s `RegisterUser`
-2. Add an email sending Service (using Resend / SendGrid API)
-3. Inject `RegisterRepo` and related services in `main.go`
-4. Add `/api/users/send-code` and `/api/users/verify-code` endpoints
+`EmailService` sends HTML email through Go's standard `net/smtp` package. Codes are generated with `crypto/rand`, stored in Redis for 15 minutes, and limited to one send per email per minute through `CountDownRepo`. Verification atomically validates and consumes the code with `GETDEL`.
 
 ---
 
@@ -851,7 +873,7 @@ import (
 
 ## 15. Roadmap
 
-- [ ] Implement SMTP email verification code sending
+- [x] Implement SMTP email verification and registration
 - [ ] Optimize session management
 - [ ] Administrator web panel
 

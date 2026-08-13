@@ -106,7 +106,8 @@ func main() {
 	sessionRepo := repository.NewSessionRepo(redis)
 	ipCache := repository.NewIPCache(redis)
 	rateLimitRepo := repository.NewRateLimitRepo(redis)
-	// registerRepo := repository.NewRegisterRepo(redis)
+	registerRepo := repository.NewRegisterRepo(redis)
+	countdownRepo := repository.NewCountDownRepo(redis)
 
 	// register services
 	adminTokenService := admin.NewAdminTokenService(tokenRepo)
@@ -117,10 +118,12 @@ func main() {
 	consumeTokenService := identity.NewConsumeTokenService(tokenRepo)
 	sessionService := identity.NewSessionService(sessionRepo)
 	rateLimitService := access.NewRateLimitService(rateLimitRepo, ratelimit, enableRatelimit, abuseLimit, abuseWindow)
+	emailService := identity.NewEmailService(registerRepo, countdownRepo,
+		os.Getenv("SMTP_HOST"), os.Getenv("SMTP_PORT"), os.Getenv("SMTP_USERNAME"), os.Getenv("SMTP_PASSWORD"), os.Getenv("SMTP_FROM"))
 
 	// register handlers
 	tokenHandler := handler.NewTokenHandler(adminTokenService)
-	userHandler := handler.NewUserHandler(sessionService, accountService, consumeTokenService)
+	userHandler := handler.NewUserHandler(sessionService, accountService, consumeTokenService, emailService)
 	ipRuleHandler := handler.NewIPRuleHandler(adminIPRuleService)
 	userManageHandler := handler.NewUserManageHandler(userManageService)
 
