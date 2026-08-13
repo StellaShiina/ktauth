@@ -1,12 +1,12 @@
 export default {
     async fetch(request: Request, env: any): Promise<Response> {
         const url = new URL(request.url)
-        const ua = request.headers.get("user-agent") || ""
 
         if (url.pathname === "/") {
-            const isCli = /curl|wget|httpie/i.test(ua)
+            const scriptHosts = new Set(["ktauth.kaju.win", "localhost", "127.0.0.1", "[::1]", "dev-ktauth.kaju.workers.dev"])
+            const isScriptHost = scriptHosts.has(url.hostname.toLowerCase())
 
-            if (isCli) {
+            if (isScriptHost) {
                 url.pathname = "/install.sh"
             } else {
                 url.pathname = "/index.html"
