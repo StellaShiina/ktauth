@@ -74,6 +74,12 @@ function setTheme(theme) {
   root.dataset.resolvedTheme = resolveTheme(theme)
   localStorage.setItem("ktauth-theme", theme)
   const labels = language === "zh" ? { system: "主题：跟随系统", light: "主题：浅色", dark: "主题：深色" } : { system: "Theme: system", light: "Theme: light", dark: "Theme: dark" }
+  const icons = {
+    system: '<rect x="3" y="4" width="18" height="13" rx="1"/><path d="M8 21h8M12 17v4"/><path d="M8 10h3M13 10h3M8 13h5"/>',
+    light: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"/>',
+    dark: '<path d="M20 15.2A8.5 8.5 0 0 1 8.8 4 8.5 8.5 0 1 0 20 15.2Z"/>'
+  }
+  themeButton.querySelector(".theme-icon").innerHTML = icons[theme]
   themeButton.setAttribute("aria-label", labels[theme])
   themeButton.setAttribute("title", labels[theme])
   document.querySelector('meta[name="theme-color"]').content = root.dataset.resolvedTheme === "dark" ? "#11100e" : "#f2f0e9"
