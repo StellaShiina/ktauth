@@ -1,22 +1,29 @@
 package handler
 
 import (
+	"context"
 	"net/http"
 
-	"github.com/StellaShiina/ktauth/internal/service/admin"
 	"github.com/gin-gonic/gin"
 )
 
-type TokenHandler struct {
-	adminTokenService *admin.AdminTokenService
+type AdminTokenManager interface {
+	Restock(ctx context.Context) error
+	FlushTokens(ctx context.Context) error
+	GetToken(ctx context.Context) (string, error)
+	GetTokens(ctx context.Context) ([]string, error)
 }
 
-func NewTokenHandler(s *admin.AdminTokenService) *TokenHandler {
+type TokenHandler struct {
+	adminTokenManager AdminTokenManager
+}
+
+func NewTokenHandler(s AdminTokenManager) *TokenHandler {
 	return &TokenHandler{s}
 }
 
 func (h *TokenHandler) Restock(c *gin.Context) {
-	err := h.adminTokenService.Restock(c.Request.Context())
+	err := h.adminTokenManager.Restock(c.Request.Context())
 	if err != nil {
 		c.String(http.StatusInternalServerError, err.Error())
 		return
@@ -25,7 +32,7 @@ func (h *TokenHandler) Restock(c *gin.Context) {
 }
 
 func (h *TokenHandler) FlushTokens(c *gin.Context) {
-	err := h.adminTokenService.FlushTokens(c.Request.Context())
+	err := h.adminTokenManager.FlushTokens(c.Request.Context())
 	if err != nil {
 		c.String(http.StatusOK, err.Error())
 		return
@@ -34,7 +41,7 @@ func (h *TokenHandler) FlushTokens(c *gin.Context) {
 }
 
 func (h *TokenHandler) GetToken(c *gin.Context) {
-	token, err := h.adminTokenService.GetToken(c.Request.Context())
+	token, err := h.adminTokenManager.GetToken(c.Request.Context())
 	if err != nil {
 		c.String(http.StatusOK, err.Error())
 		return
@@ -43,7 +50,7 @@ func (h *TokenHandler) GetToken(c *gin.Context) {
 }
 
 func (h *TokenHandler) GetTokens(c *gin.Context) {
-	tokens, err := h.adminTokenService.GetTokens(c.Request.Context())
+	tokens, err := h.adminTokenManager.GetTokens(c.Request.Context())
 	if err != nil {
 		c.String(http.StatusOK, err.Error())
 		return

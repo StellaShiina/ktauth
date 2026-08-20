@@ -39,13 +39,11 @@ func NewPostgres() (*pgxpool.Pool, error) {
 		return nil, err
 	}
 
-	// 连接池
 	pool, err := pgxpool.NewWithConfig(context.Background(), cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	// 测试连接
 	if err := pool.Ping(context.Background()); err != nil {
 		pool.Close()
 		return nil, err

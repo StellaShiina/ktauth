@@ -3,19 +3,34 @@ package admin
 import (
 	"context"
 	"log/slog"
+	"net"
 
-	"github.com/StellaShiina/ktauth/internal/repository"
+	"github.com/StellaShiina/ktauth/internal/model"
 	"github.com/StellaShiina/ktauth/pkg/iputils"
 )
 
-type AdminIPRuleService struct {
-	ipRepo        *repository.IPRepo
-	ipCache       *repository.IPCache
-	rateLimitRepo *repository.RateLimitRepo
+type IPRuleStore interface {
+	AddIP(ctx context.Context, version int16, ipRange *net.IPNet, isWhitelist bool, note *string) error
+	DelIP(ctx context.Context, version int16, ipRange *net.IPNet) error
+	GetIPs(ctx context.Context, version *int16, isWhiteList *bool) ([]model.IP, error)
 }
 
-func NewAdminIPRuleService(ipRepo *repository.IPRepo, ipCache *repository.IPCache, rateLimitRepo *repository.RateLimitRepo) *AdminIPRuleService {
-	return &AdminIPRuleService{ipRepo, ipCache, rateLimitRepo}
+type IPRuleCacheInvalidator interface {
+	Delete(ctx context.Context, ip string) error
+}
+
+type RateLimitInvalidator interface {
+	Delete(ctx context.Context, ip string) error
+}
+
+type AdminIPRuleService struct {
+	store IPRuleStore
+	cache IPRuleCacheInvalidator
+	rlInv RateLimitInvalidator
+}
+
+func NewAdminIPRuleService(store IPRuleStore, cache IPRuleCacheInvalidator, rlInv RateLimitInvalidator) *AdminIPRuleService {
+	return &AdminIPRuleService{store, cache, rlInv}
 }
 
 // Return cidr string, err error
@@ -24,12 +39,12 @@ func (s *AdminIPRuleService) AddRule(c context.Context, ipStr string, isWhiteLis
 	if err != nil {
 		return "", err
 	}
-	err = s.ipRepo.AddIP(c, version, ipNet, isWhiteList, note)
+	err = s.store.AddIP(c, version, ipNet, isWhiteList, note)
 	if err == nil {
-		if err := s.ipCache.Delete(c, ipNet.String()); err != nil {
+		if err := s.cache.Delete(c, ipNet.String()); err != nil {
 			slog.Error("Failed to delete cached rule", "error", err)
 		}
-		if err := s.rateLimitRepo.Delete(c, ipNet.String()); err != nil {
+		if err := s.rlInv.Delete(c, ipNet.String()); err != nil {
 			slog.Error("Failed to delete ratelimit record", "error", err)
 		}
 	}
@@ -38,7 +53,7 @@ func (s *AdminIPRuleService) AddRule(c context.Context, ipStr string, isWhiteLis
 
 func (s *AdminIPRuleService) ListRules(c context.Context, version *int16, isWhiteList *bool) ([]IPResponse, error) {
 	var ipres []IPResponse
-	data, err := s.ipRepo.GetIPs(c, version, isWhiteList)
+	data, err := s.store.GetIPs(c, version, isWhiteList)
 	if err != nil {
 		return nil, err
 	}
@@ -65,12 +80,12 @@ func (s *AdminIPRuleService) DelRule(c context.Context, ipStr string) (string, e
 	if err != nil {
 		return "", err
 	} else {
-		if err := s.ipCache.Delete(c, ipNet.String()); err != nil {
+		if err := s.cache.Delete(c, ipNet.String()); err != nil {
 			slog.Error("Failed to delete cached rule", "error", err)
 		}
-		if err := s.rateLimitRepo.Delete(c, ipNet.String()); err != nil {
+		if err := s.rlInv.Delete(c, ipNet.String()); err != nil {
 			slog.Error("Failed to delete ratelimit record", "error", err)
 		}
 	}
-	return ipNet.String(), s.ipRepo.DelIP(c, version, ipNet)
+	return ipNet.String(), s.store.DelIP(c, version, ipNet)
 }

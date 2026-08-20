@@ -6,6 +6,11 @@ import (
 	"github.com/StellaShiina/ktauth/internal/repository"
 )
 
+type CountDownStore interface {
+	Set(ctx context.Context, key string) error
+	CD(ctx context.Context, key string) (bool, error)
+}
+
 type CDService struct {
 	cdRepo *repository.CountDownRepo
 }

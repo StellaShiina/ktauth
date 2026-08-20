@@ -2,30 +2,35 @@ package admin
 
 import (
 	"context"
-
-	"github.com/StellaShiina/ktauth/internal/repository"
 )
 
-type AdminTokenService struct {
-	tokenRepo *repository.TokenRepo
+type TokenStore interface {
+	Restock(ctx context.Context) error
+	FlushAll(ctx context.Context) error
+	GetOne(ctx context.Context) (string, error)
+	ListAll(ctx context.Context) ([]string, error)
 }
 
-func NewAdminTokenService(r *repository.TokenRepo) *AdminTokenService {
+type AdminTokenService struct {
+	ts TokenStore
+}
+
+func NewAdminTokenService(r TokenStore) *AdminTokenService {
 	return &AdminTokenService{r}
 }
 
 func (s *AdminTokenService) Restock(c context.Context) error {
-	return s.tokenRepo.Restock(c)
+	return s.ts.Restock(c)
 }
 
 func (s *AdminTokenService) FlushTokens(c context.Context) error {
-	return s.tokenRepo.FlushAll(c)
+	return s.ts.FlushAll(c)
 }
 
 func (s *AdminTokenService) GetToken(c context.Context) (string, error) {
-	return s.tokenRepo.GetOne(c)
+	return s.ts.GetOne(c)
 }
 
 func (s *AdminTokenService) GetTokens(c context.Context) ([]string, error) {
-	return s.tokenRepo.ListAll(c)
+	return s.ts.ListAll(c)
 }

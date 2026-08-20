@@ -29,6 +29,7 @@ func main() {
 	var logLevel slog.Leveler
 	var abuseLimit int
 	var abuseWindow time.Duration
+	var trustedProxies []string
 
 	// Set up logger
 	logLevelstr := strings.TrimSpace(strings.ToLower(os.Getenv("LOGLEVEL")))
@@ -85,7 +86,7 @@ func main() {
 	redis, err := db.NewRedis()
 
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("Fail to connect to redis!", "err", err)
 	} else {
 		slog.Info("Connected to redis!")
 	}
@@ -114,10 +115,10 @@ func main() {
 	adminIPRuleService := admin.NewAdminIPRuleService(ipRepo, ipCache, rateLimitRepo)
 	userManageService := admin.NewUserManageService(userRepo)
 	ipAccessService := access.NewIPAccessService(ipRepo, ipCache)
+	rateLimitService := access.NewRateLimitService(rateLimitRepo, ratelimit, enableRatelimit, abuseLimit, abuseWindow)
 	accountService := identity.NewAccountService(userRepo)
 	consumeTokenService := identity.NewConsumeTokenService(tokenRepo)
 	sessionService := identity.NewSessionService(sessionRepo)
-	rateLimitService := access.NewRateLimitService(rateLimitRepo, ratelimit, enableRatelimit, abuseLimit, abuseWindow)
 	emailService := identity.NewEmailService(registerRepo, countdownRepo,
 		os.Getenv("SMTP_HOST"), os.Getenv("SMTP_PORT"), os.Getenv("SMTP_USERNAME"), os.Getenv("SMTP_PASSWORD"), os.Getenv("SMTP_FROM"))
 
@@ -133,12 +134,26 @@ func main() {
 	rateLimitMiddleware := middleware.NewRateLimitMiddleware(rateLimitService, adminIPRuleService)
 
 	if err := updateAdmin(accountService); err != nil {
-		log.Fatal("Failed to update admin info")
+		slog.Error("Failed to update admin info")
+		panic(err)
 	}
 
 	r := gin.Default()
 
-	r.SetTrustedProxies([]string{"127.0.0.0/8", "::1/128", "172.16.0.0/12", "192.168.0.0/16", "10.0.0.0/8"})
+	trustedProxiesRaw := os.Getenv("TRUSTED_PROXIES")
+	if trustedProxiesRaw == "" {
+		trustedProxies = []string{"127.0.0.0/8", "::1/128"}
+		slog.Warn("No trustedproxies found, using default...", "trustedProxies", trustedProxies)
+	} else {
+		trustedProxies = strings.Split(trustedProxiesRaw, ",")
+		slog.Info("Set TrustedProxies using .env", "trustedProxies", trustedProxies)
+	}
+
+	err = r.SetTrustedProxies(trustedProxies)
+	if err != nil {
+		slog.Error("Invalid TRUSTED_PROXIES settings!", "err", err)
+		panic(err)
+	}
 
 	// Kantan route
 	// Allow non-blacklist access, set ratelimit to greylist
