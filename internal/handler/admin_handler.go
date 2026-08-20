@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -13,6 +14,16 @@ import (
 
 var ipe *iputils.IPError
 
+type IPRuleManager interface {
+	AddRule(ctx context.Context, ipStr string, isWhiteList bool, note *string) (string, error)
+	ListRules(ctx context.Context, version *int16, isWhiteList *bool) ([]admin.IPResponse, error)
+	DelRule(ctx context.Context, ipStr string) (string, error)
+}
+
+type UserManager interface {
+	ListUsers(ctx context.Context) ([]admin.UserResponse, error)
+}
+
 type rule struct {
 	IP          string  `json:"ip"`
 	Note        *string `json:"note"`
@@ -20,19 +31,19 @@ type rule struct {
 }
 
 type IPRuleHandler struct {
-	adminIPRuleService *admin.AdminIPRuleService
+	ipRuleManager IPRuleManager
 }
 
 type UserManageHandler struct {
-	userManageService *admin.UserManageService
+	userManager UserManager
 }
 
-func NewIPRuleHandler(adminIPRuleService *admin.AdminIPRuleService) *IPRuleHandler {
-	return &IPRuleHandler{adminIPRuleService}
+func NewIPRuleHandler(ipRuleManager IPRuleManager) *IPRuleHandler {
+	return &IPRuleHandler{ipRuleManager}
 }
 
-func NewUserManageHandler(userManageService *admin.UserManageService) *UserManageHandler {
-	return &UserManageHandler{userManageService}
+func NewUserManageHandler(userManager UserManager) *UserManageHandler {
+	return &UserManageHandler{userManager}
 }
 
 func (h *IPRuleHandler) AddRule(c *gin.Context) {
@@ -50,7 +61,7 @@ func (h *IPRuleHandler) AddRule(c *gin.Context) {
 		isWhiteList = true
 	}
 
-	cidr, err := h.adminIPRuleService.AddRule(c.Request.Context(), json.IP, isWhiteList, json.Note)
+	cidr, err := h.ipRuleManager.AddRule(c.Request.Context(), json.IP, isWhiteList, json.Note)
 
 	if err != nil {
 		if errors.As(err, &ipe) {
@@ -89,7 +100,7 @@ func (h *IPRuleHandler) ListRules(c *gin.Context) {
 		typeBool := false
 		isWhiteList = &typeBool
 	}
-	rules, err := h.adminIPRuleService.ListRules(c.Request.Context(), version, isWhiteList)
+	rules, err := h.ipRuleManager.ListRules(c.Request.Context(), version, isWhiteList)
 	if err != nil {
 		c.String(http.StatusInternalServerError, "Server error...")
 		return
@@ -103,7 +114,7 @@ func (h *IPRuleHandler) DelRule(c *gin.Context) {
 		c.String(http.StatusBadRequest, err.Error())
 		return
 	}
-	cidr, err := h.adminIPRuleService.DelRule(c.Request.Context(), json.IP)
+	cidr, err := h.ipRuleManager.DelRule(c.Request.Context(), json.IP)
 	if err != nil {
 		if errors.As(err, &ipe) {
 			c.String(http.StatusBadRequest, err.Error())
@@ -120,7 +131,7 @@ func (h *IPRuleHandler) DelRule(c *gin.Context) {
 }
 
 func (h *UserManageHandler) ListUsers(c *gin.Context) {
-	users, err := h.userManageService.ListUsers(c.Request.Context())
+	users, err := h.userManager.ListUsers(c.Request.Context())
 	if err != nil {
 		c.String(http.StatusInternalServerError, "Server error...")
 		slog.Error("Error when listing users", "error", err.Error())

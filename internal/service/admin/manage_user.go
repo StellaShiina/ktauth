@@ -3,20 +3,24 @@ package admin
 import (
 	"context"
 
-	"github.com/StellaShiina/ktauth/internal/repository"
+	"github.com/StellaShiina/ktauth/internal/model"
 )
 
-type UserManageService struct {
-	userRepo *repository.UserRepo
+type UserReader interface {
+	ListUsers(ctx context.Context) ([]model.User, error)
 }
 
-func NewUserManageService(userRepo *repository.UserRepo) *UserManageService {
-	return &UserManageService{userRepo}
+type UserManageService struct {
+	userReader UserReader
+}
+
+func NewUserManageService(userReader UserReader) *UserManageService {
+	return &UserManageService{userReader}
 }
 
 func (s *UserManageService) ListUsers(c context.Context) ([]UserResponse, error) {
 	var userres []UserResponse
-	data, err := s.userRepo.ListUsers(c)
+	data, err := s.userReader.ListUsers(c)
 	if err != nil {
 		return nil, err
 	}

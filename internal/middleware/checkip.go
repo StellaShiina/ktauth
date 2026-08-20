@@ -1,26 +1,30 @@
 package middleware
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 
 	"github.com/StellaShiina/ktauth/internal/model"
-	"github.com/StellaShiina/ktauth/internal/service/access"
 	"github.com/gin-gonic/gin"
 )
 
-type CheckIPMiddleware struct {
-	ipAccessService *access.IPAccessService
+type IPRuleQuerier interface {
+	QueryRule(ctx context.Context, ip string) (model.IPRuleType, error)
 }
 
-func NewCheckIPMiddleware(s *access.IPAccessService) *CheckIPMiddleware {
+type CheckIPMiddleware struct {
+	ipQuerier IPRuleQuerier
+}
+
+func NewCheckIPMiddleware(s IPRuleQuerier) *CheckIPMiddleware {
 	return &CheckIPMiddleware{s}
 }
 
 // level 0 to deny blacklist, level 1 to only allow whitelist
 func (m *CheckIPMiddleware) ACL(level int) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		rule_type, err := m.ipAccessService.QueryRule(c, c.ClientIP())
+		rule_type, err := m.ipQuerier.QueryRule(c, c.ClientIP())
 		if err != nil {
 			slog.Error(err.Error())
 			c.AbortWithStatus(http.StatusInternalServerError)

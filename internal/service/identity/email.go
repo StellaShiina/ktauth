@@ -3,29 +3,49 @@ package identity
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/mail"
 	"net/smtp"
 	"strings"
 	"time"
 
 	"github.com/StellaShiina/ktauth/internal/crypto"
-	"github.com/StellaShiina/ktauth/internal/repository"
 	"github.com/google/uuid"
 )
 
-// EmailService sends and validates short-lived registration email codes.
-type EmailService struct {
-	registerRepo  *repository.RegisterRepo
-	countdownRepo *repository.CountDownRepo
-	host          string
-	port          string
-	username      string
-	password      string
-	from          string
+type RegistrationCodeStore interface {
+	Set(ctx context.Context, email, code string) error
+	Validate(ctx context.Context, email, code string) (bool, error)
 }
 
-func NewEmailService(registerRepo *repository.RegisterRepo, countdownRepo *repository.CountDownRepo, host, port, username, password, from string) *EmailService {
-	return &EmailService{registerRepo, countdownRepo, host, port, username, password, from}
+type CooldownStore interface {
+	Set(ctx context.Context, key string) error
+	// return true if the given key is in cd.
+	CD(ctx context.Context, key string) (bool, error)
+}
+
+// EmailService sends and validates short-lived registration email codes.
+type EmailService struct {
+	codeStore RegistrationCodeStore
+	cdStore   CooldownStore
+	host      string
+	port      string
+	username  string
+	password  string
+	from      *mail.Address
+}
+
+func NewEmailService(codeStore RegistrationCodeStore, cdStore CooldownStore, host, port, username, password, fromStr string) *EmailService {
+	if host == "" || port == "" || fromStr == "" {
+		slog.Warn("SMTP is not configured")
+		return nil
+	}
+	from, err := mail.ParseAddress(fromStr)
+	if err != nil {
+		slog.Error("invalid SMTP from address")
+		return nil
+	}
+	return &EmailService{codeStore, cdStore, host, port, username, password, from}
 }
 
 func (s *EmailService) SendCode(ctx context.Context, email string) error {
@@ -33,15 +53,8 @@ func (s *EmailService) SendCode(ctx context.Context, email string) error {
 	if err != nil || address.Address != email {
 		return fmt.Errorf("invalid email address")
 	}
-	if s.host == "" || s.port == "" || s.from == "" {
-		return fmt.Errorf("SMTP is not configured")
-	}
-	fromAddress, err := mail.ParseAddress(s.from)
-	if err != nil {
-		return fmt.Errorf("invalid SMTP from address")
-	}
 
-	inCooldown, err := s.countdownRepo.CD(ctx, email)
+	inCooldown, err := s.cdStore.CD(ctx, email)
 	if err != nil {
 		return err
 	}
@@ -73,7 +86,7 @@ func (s *EmailService) SendCode(ctx context.Context, email string) error {
   </table>
 </body>
 </html>`, code, code)
-	message := []byte("From: " + fromAddress.String() + "\r\n" +
+	message := []byte("From: " + s.from.String() + "\r\n" +
 		"To: " + address.String() + "\r\n" +
 		"Date: " + time.Now().Format(time.RFC1123Z) + "\r\n" +
 		"Message-ID: <" + uuid.NewString() + "@" + s.host + ">\r\n" +
@@ -86,18 +99,18 @@ func (s *EmailService) SendCode(ctx context.Context, email string) error {
 	if s.username != "" {
 		auth = smtp.PlainAuth("", s.username, s.password, s.host)
 	}
-	if err := smtp.SendMail(s.host+":"+s.port, auth, fromAddress.Address, []string{address.Address}, message); err != nil {
+	if err := smtp.SendMail(s.host+":"+s.port, auth, s.from.Address, []string{address.Address}, message); err != nil {
 		return err
 	}
-	if err := s.registerRepo.Set(ctx, email, code); err != nil {
+	if err := s.codeStore.Set(ctx, email, code); err != nil {
 		return err
 	}
-	return s.countdownRepo.Set(ctx, email)
+	return s.cdStore.Set(ctx, email)
 }
 
 func (s *EmailService) VerifyCode(ctx context.Context, email, code string) (bool, error) {
 	if strings.TrimSpace(email) == "" || strings.TrimSpace(code) == "" {
 		return false, fmt.Errorf("email and code are required")
 	}
-	return s.registerRepo.Validate(ctx, email, code)
+	return s.codeStore.Validate(ctx, email, code)
 }

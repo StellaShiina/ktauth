@@ -1,21 +1,41 @@
 package handler
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
 
 	"github.com/StellaShiina/ktauth/internal/auth"
 	"github.com/StellaShiina/ktauth/internal/crypto"
-	"github.com/StellaShiina/ktauth/internal/service/identity"
+	"github.com/StellaShiina/ktauth/internal/model"
 	"github.com/gin-gonic/gin"
 )
 
+type UserSessionManager interface {
+	CreateSession(ctx context.Context, uuid, jti string) error
+	DelSession(ctx context.Context, uuid, jti string) error
+}
+
+type UserAccountManager interface {
+	NewUser(ctx context.Context, name, password string, email *string, role string) (string, error)
+	GetUserByName(ctx context.Context, name string) (model.User, error)
+}
+
+type RegistrationTokenConsumer interface {
+	Consume(ctx context.Context, token string) bool
+}
+
+type EmailCodeManager interface {
+	SendCode(ctx context.Context, email string) error
+	VerifyCode(ctx context.Context, email, code string) (bool, error)
+}
+
 type UserHandler struct {
-	sessionService      *identity.SessionService
-	accountService      *identity.AccountService
-	consumeTokenService *identity.ConsumeTokenService
-	emailService        *identity.EmailService
+	sessionManager UserSessionManager
+	accountManager UserAccountManager
+	tokenConsumer  RegistrationTokenConsumer
+	codeManager    EmailCodeManager
 }
 
 type register struct {
@@ -36,16 +56,16 @@ type emailCode struct {
 	Code  string `form:"code" json:"code" xml:"code"`
 }
 
-func NewUserHandler(sessionService *identity.SessionService, accountService *identity.AccountService, consumeTokenService *identity.ConsumeTokenService, emailService ...*identity.EmailService) *UserHandler {
-	var es *identity.EmailService
-	if len(emailService) > 0 {
-		es = emailService[0]
+func NewUserHandler(sessionManager UserSessionManager, accountManager UserAccountManager, tokenConsumer RegistrationTokenConsumer, codeManager ...EmailCodeManager) *UserHandler {
+	var es EmailCodeManager
+	if len(codeManager) > 0 {
+		es = codeManager[0]
 	}
-	return &UserHandler{sessionService, accountService, consumeTokenService, es}
+	return &UserHandler{sessionManager, accountManager, tokenConsumer, es}
 }
 
 func (h *UserHandler) SendEmailCode(c *gin.Context) {
-	if h.emailService == nil {
+	if h.codeManager == nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "SMTP is not configured"})
 		return
 	}
@@ -54,7 +74,7 @@ func (h *UserHandler) SendEmailCode(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if err := h.emailService.SendCode(c.Request.Context(), req.Email); err != nil {
+	if err := h.codeManager.SendCode(c.Request.Context(), req.Email); err != nil {
 		switch err.Error() {
 		case "verification code recently sent":
 			c.JSON(http.StatusTooManyRequests, gin.H{"error": err.Error()})
@@ -70,7 +90,7 @@ func (h *UserHandler) SendEmailCode(c *gin.Context) {
 }
 
 func (h *UserHandler) VerifyEmailCode(c *gin.Context) {
-	if h.emailService == nil {
+	if h.codeManager == nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "SMTP is not configured"})
 		return
 	}
@@ -83,7 +103,7 @@ func (h *UserHandler) VerifyEmailCode(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "code is required"})
 		return
 	}
-	valid, err := h.emailService.VerifyCode(c.Request.Context(), req.Email, req.Code)
+	valid, err := h.codeManager.VerifyCode(c.Request.Context(), req.Email, req.Code)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -103,7 +123,7 @@ func (h *UserHandler) RegisterUser(c *gin.Context) {
 	}
 
 	if json.Token != nil && *json.Token != "" {
-		if !h.consumeTokenService.Consume(c.Request.Context(), *json.Token) {
+		if !h.tokenConsumer.Consume(c.Request.Context(), *json.Token) {
 			c.JSON(http.StatusUnauthorized, gin.H{"status": "unauthorized"})
 			return
 		}
@@ -112,11 +132,11 @@ func (h *UserHandler) RegisterUser(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "token or email and code are required"})
 			return
 		}
-		if h.emailService == nil {
+		if h.codeManager == nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "SMTP is not configured"})
 			return
 		}
-		valid, err := h.emailService.VerifyCode(c.Request.Context(), *json.Email, *json.Code)
+		valid, err := h.codeManager.VerifyCode(c.Request.Context(), *json.Email, *json.Code)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -127,7 +147,7 @@ func (h *UserHandler) RegisterUser(c *gin.Context) {
 		}
 	}
 
-	uuid, err := h.accountService.NewUser(c.Request.Context(), json.User, json.Password, json.Email, "user")
+	uuid, err := h.accountManager.NewUser(c.Request.Context(), json.User, json.Password, json.Email, "user")
 	if err != nil {
 		fmt.Println("Register new user failed:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create"})
@@ -144,7 +164,7 @@ func (h *UserHandler) LoginUser(c *gin.Context) {
 		return
 	}
 
-	user, err := h.accountService.GetUserByName(c.Request.Context(), json.User)
+	user, err := h.accountManager.GetUserByName(c.Request.Context(), json.User)
 
 	if err != nil {
 		slog.Error(err.Error())
@@ -164,7 +184,7 @@ func (h *UserHandler) LoginUser(c *gin.Context) {
 		return
 	}
 
-	err = h.sessionService.CreateSession(c.Request.Context(), user.UUID, jti)
+	err = h.sessionManager.CreateSession(c.Request.Context(), user.UUID, jti)
 
 	if err != nil {
 		c.String(http.StatusInternalServerError, "Server error")
@@ -182,7 +202,7 @@ func (h *UserHandler) LoginUser(c *gin.Context) {
 func (h *UserHandler) LogoutUser(c *gin.Context) {
 	jti := c.GetString("jti")
 	uuid := c.GetString("uuid")
-	err := h.sessionService.DelSession(c.Request.Context(), uuid, jti)
+	err := h.sessionManager.DelSession(c.Request.Context(), uuid, jti)
 	if err != nil {
 		c.String(http.StatusInternalServerError, "Server error")
 		return

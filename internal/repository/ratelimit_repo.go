@@ -69,7 +69,8 @@ return cnt
 // key: Unique identifier for the limit (e.g., "ratelimit:ip:127.0.0.1")
 // limit: Maximum number of requests allowed in the window
 // window: The duration of the sliding window
-func (r *RateLimitRepo) Allow(ctx context.Context, key string, limit int, window time.Duration) (bool, error) {
+func (r *RateLimitRepo) Allow(ctx context.Context, ip string, limit int, window time.Duration) (bool, error) {
+	key := fmt.Sprintf("ratelimit:ip:%s", ip)
 	now := time.Now()
 	nowMs := now.UnixMilli()
 
@@ -96,10 +97,11 @@ func (r *RateLimitRepo) Allow(ctx context.Context, key string, limit int, window
 	return false, fmt.Errorf("unexpected result type from redis script: %T", result)
 }
 
-func (r *RateLimitRepo) Abuse(ctx context.Context, cidr string, limit int, window time.Duration) (bool, error) {
-	slog.Debug("abuseinfo", "cidr", cidr, "limit", limit, "window", window)
-	key := []string{"abuse:429:" + cidr}
-	result, err := increaseWithExpireScript.Run(ctx, r.rdb, key, int(window.Seconds()), limit).Result()
+func (r *RateLimitRepo) Abuse(ctx context.Context, ip string, limit int, window time.Duration) (bool, error) {
+	key := fmt.Sprintf("abuse:429:%s", ip)
+	slog.Debug("abuseinfo", "key", key, "limit", limit, "window", window)
+	keys := []string{key}
+	result, err := increaseWithExpireScript.Run(ctx, r.rdb, keys, int(window.Seconds()), limit).Result()
 	if err != nil {
 		return false, fmt.Errorf("failed to execute rate limit script: %w", err)
 	}
