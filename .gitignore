@@ -7,3 +7,4 @@ ktauth
 *.log
 docker-compose.test.yaml
 .wrangler
+*-tests

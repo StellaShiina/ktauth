@@ -11,7 +11,7 @@ const backToTop = document.querySelector("#back-to-top")
 const commandBase = "bash <(curl -fsSL https://ktauth.kaju.win)"
 const translations = {
   en: {
-    skip: "Skip to content", navStart: "Get started", navRoutes: "Two routes", navInside: "Highlights", navApi: "API",
+    skip: "Skip to content", navStart: "Get started", navRoutes: "Two routes", navInside: "Highlights", navBenchmark: "Benchmark", navApi: "API",
     heroLead: "Keep complex access decisions outside your app.",
     heroSub: "A lightweight, self-hosted authentication and authorization service. Clear Forward Auth, IP policy, precise rate limiting, and identity sessions for your reverse proxy.",
     viewSource: "View source", quickOverline: "START HERE / ONE SCRIPT", quickTitle: "Hand the gate<br>to KTAUTH.",
@@ -27,6 +27,9 @@ const translations = {
     rateTitle: "Millisecond sliding window", rateCopy: "Redis Lua and Sorted Sets calculate request windows atomically, controlling bursts and sustained abuse with precision.",
     identityTitle: "Identity, end to end", identityCopy: "Invitation or email-code registration, bcrypt password hashing, JWT, and revocable Redis sessions working together.",
     architectureTitle: "A clean Go core", architectureCopy: "Layered Gin architecture, PostgreSQL persistence, and Redis-backed fast state. Clear boundaries make it easy to read and extend.",
+    benchmarkOverline: "CORE ROUTE LOAD TEST / 2026.08.31", benchmarkTitle: "Gate performance.<br>Only the essentials.", benchmarkCopy: "Local loopback traffic. Standard scenarios use 200 warm-up requests, 10,000 measured requests, and 100 concurrent workers; the abuse-to-blocklist scenario uses 16,100 requests.",
+    benchmarkScenario: "SCENARIO", benchmarkResult: "RESPONSES", benchWhitelist: "Allowlisted", benchRandomZero: "Random non-allowlisted", benchRandomOne: "Non-allowlisted rejection", benchAbuse: "Abuse to blocklist",
+    benchmarkNote: "This virtualized, containerized test environment may impose some performance overhead. These figures describe this run only and do not represent native Linux performance.",
     apiOverline: "GO DEEPER WHEN NEEDED", apiTitle: "An API kept<br>easy to scan.", apiCopy: "Only endpoints and intent live here. Request schemas and full technical detail remain in the GitHub docs.",
     apiLabel: "ENDPOINT INDEX", showEndpoints: "Reveal all endpoints", hideEndpoints: "Hide all endpoints", users: "USERS", tokens: "TOKENS", policies: "IP RULES",
     epRegister: "Invite or email registration", epSend: "Send email code", epVerify: "Verify and consume code", epLogin: "Sign in", epAuth: "Check session", epLogout: "End current session", epUsers: "User list · admin",
@@ -34,7 +37,7 @@ const translations = {
     fullDocs: "Read the full documentation on GitHub", closingTitle: "Guard the gate.<br>Build what matters.", footerLine: "Simple auth. Clear boundaries.", copied: "Command copied", topLabel: "Top"
   },
   zh: {
-    skip: "跳至内容", navStart: "开始使用", navRoutes: "双路由", navInside: "项目亮点", navApi: "API",
+    skip: "跳至内容", navStart: "开始使用", navRoutes: "双路由", navInside: "项目亮点", navBenchmark: "性能测试", navApi: "API",
     heroLead: "把复杂的访问判断，挡在应用之外。", heroSub: "一个轻量、自托管的认证与授权服务。为反向代理提供清晰的 Forward Auth、IP 策略、精确限流与身份会话。", viewSource: "查看源代码",
     quickOverline: "从这里开始 / ONE SCRIPT", quickTitle: "把入口交给<br>KTAUTH。", quickCopy: "脚本会引导完成 Docker 检查、监听地址与核心凭据配置。选择动作，然后复制执行。",
     install: "安装", uninstall: "卸载", update: "更新", config: "配置", interactive: "交互式配置",
@@ -43,6 +46,9 @@ const translations = {
     insideOverline: "小体积，不是小能力", insideTitle: "在一道门后，<br>做足关键判断。", aclTitle: "IP 策略缓存", aclCopy: "白、灰、黑名单覆盖单个 IPv4 与 IPv6 /64；Redis 缓存让入口判断保持迅速。",
     rateTitle: "毫秒级滑动窗口", rateCopy: "Redis Lua 与 Sorted Set 原子计算请求窗口，精确控制突发流量与持续滥用。", identityTitle: "完整身份闭环", identityCopy: "邀请码或邮箱验证码注册，bcrypt 密码哈希，JWT 与可撤销 Redis 会话协作。",
     architectureTitle: "干净的 Go 内核", architectureCopy: "Gin 驱动的分层架构，PostgreSQL 持久化，Redis 承担高速状态；边界明确，便于阅读与扩展。",
+    benchmarkOverline: "核心路由压力测试 / 2026.08.31", benchmarkTitle: "入口性能，<br>简洁呈现。", benchmarkCopy: "本地回环请求；标准场景均为 200 次预热、10,000 次请求和 100 并发。滥用转黑名单场景为 16,100 次请求。",
+    benchmarkScenario: "场景", benchmarkResult: "响应", benchWhitelist: "白名单放行", benchRandomZero: "随机非白名单", benchRandomOne: "非白名单拒绝", benchAbuse: "滥用转黑名单",
+    benchmarkNote: "该虚拟化与容器化测试环境可能带来较大的性能损耗；数据仅用于描述本次测试，不代表原生 Linux 部署表现。",
     apiOverline: "需要时，再深入", apiTitle: "API，保持<br>简洁可查。", apiCopy: "这里只列出接口与职责。请求结构和完整技术细节请前往 GitHub 文档。", apiLabel: "端点索引", showEndpoints: "展开全部端点", hideEndpoints: "收起全部端点",
     users: "用户 / USERS", tokens: "令牌 / TOKENS", policies: "策略 / IP RULES", epRegister: "邀请码或邮箱注册", epSend: "发送邮箱验证码", epVerify: "验证并消费验证码", epLogin: "用户登录", epAuth: "检查登录状态", epLogout: "结束当前会话", epUsers: "用户列表 · 管理员",
     epRestock: "批量生成邀请码", epFlush: "清空可用邀请码", epToken: "获取一个邀请码", epTokens: "全部邀请码", epIps: "列出 IP 规则", epIpsNew: "创建 IP 规则", epIpsDelete: "删除 IP 规则",
