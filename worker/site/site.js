@@ -48,7 +48,7 @@ const translations = {
     architectureTitle: "干净的 Go 内核", architectureCopy: "Gin 驱动的分层架构，PostgreSQL 持久化，Redis 承担高速状态；边界明确，便于阅读与扩展。",
     benchmarkOverline: "核心路由压力测试 / 2026.08.31", benchmarkTitle: "入口性能，<br>简洁呈现。", benchmarkCopy: "本地回环请求；标准场景均为 200 次预热、10,000 次请求和 100 并发。滥用转黑名单场景为 16,100 次请求。",
     benchmarkScenario: "场景", benchmarkResult: "响应", benchWhitelist: "白名单放行", benchRandomZero: "随机非白名单", benchRandomOne: "非白名单拒绝", benchAbuse: "滥用转黑名单",
-    benchmarkNote: "该虚拟化与容器化测试环境可能带来较大的性能损耗；数据仅用于描述本次测试，不代表原生 Linux 部署表现。",
+    benchmarkNote: "该虚拟化与容器化测试环境可能带来一定的性能损耗；数据仅用于描述本次测试，不代表原生 Linux 部署表现。",
     apiOverline: "需要时，再深入", apiTitle: "API，保持<br>简洁可查。", apiCopy: "这里只列出接口与职责。请求结构和完整技术细节请前往 GitHub 文档。", apiLabel: "端点索引", showEndpoints: "展开全部端点", hideEndpoints: "收起全部端点",
     users: "用户 / USERS", tokens: "令牌 / TOKENS", policies: "策略 / IP RULES", epRegister: "邀请码或邮箱注册", epSend: "发送邮箱验证码", epVerify: "验证并消费验证码", epLogin: "用户登录", epAuth: "检查登录状态", epLogout: "结束当前会话", epUsers: "用户列表 · 管理员",
     epRestock: "批量生成邀请码", epFlush: "清空可用邀请码", epToken: "获取一个邀请码", epTokens: "全部邀请码", epIps: "列出 IP 规则", epIpsNew: "创建 IP 规则", epIpsDelete: "删除 IP 规则",

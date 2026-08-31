@@ -5,13 +5,14 @@ on:
     branches:
       - main
     tags:
-      - 'v*'
+      - "v*"
     paths-ignore:
       - README.md
       - README_zh-CN.md
       - LICENSE
       - install.sh
       - worker/**
+      - .gitignore
 
 jobs:
   changes:
