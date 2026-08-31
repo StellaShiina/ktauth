@@ -13,6 +13,7 @@ on:
       - install.sh
       - worker/**
       - deploy-site-pages.yaml
+      - .gitignore
 
 jobs:
   changes:
