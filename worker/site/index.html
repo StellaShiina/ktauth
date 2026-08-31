@@ -7,8 +7,8 @@
   <meta name="theme-color" content="#f2f0e9">
   <meta name="description" content="KTAUTH 是一套轻量、自托管的网关访问控制服务：Forward Auth、IP 策略、滑动窗口限流与身份会话。">
   <title>KTAUTH / Keep the gate simple.</title>
-  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/styles.css">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <a class="skip-link" href="#main" data-i18n="skip">跳至内容</a>
@@ -41,6 +41,7 @@
       <a href="#start" data-i18n="navStart">开始使用</a>
       <a href="#routes" data-i18n="navRoutes">双路由</a>
       <a href="#inside" data-i18n="navInside">项目亮点</a>
+      <a href="#benchmark" data-i18n="navBenchmark">性能测试</a>
       <a href="#api" data-i18n="navApi">API</a>
     </nav>
   </header>
@@ -190,9 +191,50 @@
       </div>
     </section>
 
+    <section class="benchmark-section" id="benchmark" aria-labelledby="benchmark-title">
+      <div class="benchmark-head reveal">
+        <div class="section-marker"><span>04</span><span>BENCHMARK</span></div>
+        <div>
+          <p class="overline" data-i18n="benchmarkOverline">核心路由压力测试 / 2026.08.31</p>
+          <h2 id="benchmark-title" data-i18n="benchmarkTitle">入口性能，<br>简洁呈现。</h2>
+        </div>
+        <p data-i18n="benchmarkCopy">本地回环请求；标准场景均为 200 次预热、10,000 次请求和 100 并发。滥用转黑名单场景为 16,100 次请求。</p>
+      </div>
+
+      <div class="benchmark-table reveal" role="table" aria-label="核心路由压力测试结果">
+        <div class="benchmark-row benchmark-labels" role="row">
+          <span role="columnheader" data-i18n="benchmarkScenario">场景</span>
+          <span role="columnheader" data-i18n="benchmarkResult">响应</span>
+          <span role="columnheader">REQ/S</span>
+          <span role="columnheader">P95</span>
+        </div>
+        <div class="benchmark-row" role="row">
+          <strong role="cell"><code>/kt/0</code><span data-i18n="benchWhitelist">白名单放行</span></strong>
+          <span role="cell">204 / 10,000</span><b role="cell">23,245</b><span role="cell">7.51 ms</span>
+        </div>
+        <div class="benchmark-row" role="row">
+          <strong role="cell"><code>/kt/0</code><span data-i18n="benchRandomZero">随机非白名单</span></strong>
+          <span role="cell">204 / 10,000</span><b role="cell">18,015</b><span role="cell">8.98 ms</span>
+        </div>
+        <div class="benchmark-row" role="row">
+          <strong role="cell"><code>/kt/1</code><span data-i18n="benchRandomOne">非白名单拒绝</span></strong>
+          <span role="cell">403 / 10,000</span><b role="cell">20,468</b><span role="cell">8.27 ms</span>
+        </div>
+        <div class="benchmark-row" role="row">
+          <strong role="cell"><code>/kt/0</code><span data-i18n="benchAbuse">滥用转黑名单</span></strong>
+          <span role="cell">204 / 403 / 429</span><b role="cell">19,583</b><span role="cell">8.74 ms</span>
+        </div>
+      </div>
+
+      <div class="benchmark-environment reveal">
+        <span>INTEL CORE i9-13900HX</span><span>32 GB RAM</span><span>WINDOWS 11</span><span>DOCKER / WSL2 BACKEND</span>
+        <p data-i18n="benchmarkNote">该虚拟化与容器化测试环境可能带来一定的性能损耗；数据仅用于描述本次测试，不代表原生 Linux 部署表现。</p>
+      </div>
+    </section>
+
     <section class="api-section" id="api" aria-labelledby="api-title">
       <div class="api-intro reveal">
-        <div class="section-marker"><span>04</span><span>REFERENCE</span></div>
+        <div class="section-marker"><span>05</span><span>REFERENCE</span></div>
         <p class="overline" data-i18n="apiOverline">需要时，再深入</p>
         <h2 id="api-title" data-i18n="apiTitle">API，保持<br>简洁可查。</h2>
         <p data-i18n="apiCopy">这里只列出接口与职责。请求结构和完整技术细节请前往 GitHub 文档。</p>
@@ -265,6 +307,6 @@
     <span data-i18n="topLabel">顶部</span>
   </button>
   <div class="toast" role="status" aria-live="polite" data-i18n="copied">命令已复制</div>
-  <script src="/site.js" defer></script>
+  <script src="site.js" defer></script>
 </body>
 </html>

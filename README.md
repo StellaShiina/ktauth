@@ -64,6 +64,19 @@ chmod +x ktauth.sh
 ### 🚀 Performance Optimization
 - **Redis Caching:** IP rules are cached with adjustable TTL (Default: Blacklist 1h, Whitelist 30min, Greylist 5min).
 
+### Core Endpoint Benchmark
+
+Local loopback test with 200 warm-up requests and 100 concurrent workers (2026-08-31):
+
+| Scenario | Requests | Throughput | P95 |
+| :--- | ---: | ---: | ---: |
+| `/kt/0` allowlisted | 10,000 | 23,245 req/s | 7.51 ms |
+| `/kt/0` random non-allowlisted | 10,000 | 18,015 req/s | 8.98 ms |
+| `/kt/1` non-allowlisted rejection | 10,000 | 20,468 req/s | 8.27 ms |
+| `/kt/0` abuse to blocklist | 16,100 | 19,583 req/s | 8.74 ms |
+
+Environment: Intel Core i9-13900HX, 32 GB RAM, Windows 11 Docker with a WSL2 backend. This virtualized, containerized setup may impose some performance overhead; results describe this test run and do not represent native Linux performance.
+
 ### 🏗️ Clean Architecture
 - Follows a structured **Layered Architecture** (Handler -> Service -> Repository -> DB).
 - Separation of concerns ensures maintainability and testability.
