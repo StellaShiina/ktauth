@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/StellaShiina/ktauth/internal/logctx"
 	"github.com/StellaShiina/ktauth/internal/model"
 	"github.com/gin-gonic/gin"
 )
@@ -27,13 +28,15 @@ func (m *CheckIPMiddleware) ACL(level int) gin.HandlerFunc {
 		rule_type, err := m.ipQuerier.QueryRule(c, c.ClientIP())
 		if err != nil {
 			slog.Error("failed to query ip rule", "error", err, "clientIP", c.ClientIP())
+			logctx.SetReasonDetail(c, logctx.ReasonIPRuleLookupFailed, err)
 			c.AbortWithStatus(http.StatusInternalServerError)
 			return
 		}
 		// audit-log context only: lets the access log report which rule fired
-		c.Set("rule", string(rule_type))
+		c.Set(logctx.KeyRule, string(rule_type))
 		switch rule_type {
 		case model.IPBlackList:
+			logctx.SetReason(c, logctx.ReasonIPBlacklisted)
 			c.JSON(http.StatusForbidden, gin.H{
 				"message": "Sorry, you are not allow to access",
 				"ip":      c.ClientIP(),
@@ -42,6 +45,7 @@ func (m *CheckIPMiddleware) ACL(level int) gin.HandlerFunc {
 			return
 		case model.IPGreyList:
 			if level == 1 {
+				logctx.SetReason(c, logctx.ReasonIPNotWhitelisted)
 				c.JSON(http.StatusForbidden, gin.H{
 					"message": "Sorry, you are not allow to access",
 					"ip":      c.ClientIP(),
@@ -58,6 +62,7 @@ func (m *CheckIPMiddleware) ACL(level int) gin.HandlerFunc {
 			return
 		default:
 			slog.Error("unknown ip rule type", "rule", string(rule_type), "clientIP", c.ClientIP())
+			logctx.SetReason(c, logctx.ReasonUnknownIPRule)
 			c.AbortWithStatus(http.StatusInternalServerError)
 		}
 	}

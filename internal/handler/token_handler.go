@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/StellaShiina/ktauth/internal/logctx"
 	"github.com/gin-gonic/gin"
 )
 
@@ -27,6 +28,7 @@ func (h *TokenHandler) Restock(c *gin.Context) {
 	err := h.adminTokenManager.Restock(c.Request.Context())
 	if err != nil {
 		slog.Error("failed to restock tokens", "error", err)
+		logctx.SetReasonDetail(c, logctx.ReasonRestockTokensFailed, err)
 		c.String(http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -37,7 +39,8 @@ func (h *TokenHandler) FlushTokens(c *gin.Context) {
 	err := h.adminTokenManager.FlushTokens(c.Request.Context())
 	if err != nil {
 		slog.Error("failed to flush tokens", "error", err)
-		c.String(http.StatusOK, err.Error())
+		logctx.SetReasonDetail(c, logctx.ReasonFlushTokensFailed, err)
+		c.String(http.StatusInternalServerError, err.Error())
 		return
 	}
 	c.String(http.StatusOK, "OK")

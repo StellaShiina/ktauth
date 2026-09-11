@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/StellaShiina/ktauth/internal/handler"
+	"github.com/StellaShiina/ktauth/internal/logctx"
 	"github.com/gin-gonic/gin"
 )
 
@@ -64,10 +65,14 @@ func TestTokenHandlerReturnsServiceErrors(t *testing.T) {
 	h := handler.NewTokenHandler(manager)
 
 	tests := []struct {
-		call func(*gin.Context)
-		want int
+		call       func(*gin.Context)
+		want       int
+		wantReason logctx.Reason
 	}{
-		{call: h.Restock, want: http.StatusInternalServerError},
+		{call: h.Restock, want: http.StatusInternalServerError, wantReason: logctx.ReasonRestockTokensFailed},
+		// These three report a failure as HTTP 200, so the status-driven access
+		// log cannot see them and no reason is recorded. Pinned here so the
+		// blind spot stays deliberate rather than accidental.
 		{call: h.FlushTokens, want: http.StatusOK},
 		{call: h.GetToken, want: http.StatusOK},
 		{call: h.GetTokens, want: http.StatusOK},
@@ -77,6 +82,9 @@ func TestTokenHandlerReturnsServiceErrors(t *testing.T) {
 		tt.call(c)
 		if recorder.Code != tt.want {
 			t.Fatalf("status = %d, want %d", recorder.Code, tt.want)
+		}
+		if got := c.GetString(logctx.KeyReason); got != string(tt.wantReason) {
+			t.Fatalf("audit reason = %q, want %q", got, tt.wantReason)
 		}
 	}
 }

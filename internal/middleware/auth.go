@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/StellaShiina/ktauth/internal/auth"
+	"github.com/StellaShiina/ktauth/internal/logctx"
 	"github.com/gin-gonic/gin"
 )
 
@@ -25,6 +26,7 @@ func (m *AuthMiddleWare) VerifySession(requireRole string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authStr := c.GetHeader("Authorization")
 		if !strings.HasPrefix(authStr, "Bearer ") {
+			logctx.SetReason(c, logctx.ReasonMissingBearerToken)
 			c.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
@@ -34,6 +36,7 @@ func (m *AuthMiddleWare) VerifySession(requireRole string) gin.HandlerFunc {
 		claims, err := auth.ParseToken(tokenStr)
 
 		if err != nil {
+			logctx.SetReasonDetail(c, logctx.ReasonInvalidToken, err)
 			c.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
@@ -41,6 +44,7 @@ func (m *AuthMiddleWare) VerifySession(requireRole string) gin.HandlerFunc {
 		uuid, err := m.SessionReader.GetSession(c.Request.Context(), claims.UUID, claims.ID)
 
 		if err != nil || claims.UUID != uuid {
+			logctx.SetReasonDetail(c, logctx.ReasonInvalidSession, err)
 			c.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
@@ -49,6 +53,7 @@ func (m *AuthMiddleWare) VerifySession(requireRole string) gin.HandlerFunc {
 		c.Set("jti", claims.ID)
 
 		if requireRole == "admin" && claims.Role != "admin" {
+			logctx.SetReason(c, logctx.ReasonInsufficientRole)
 			c.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}

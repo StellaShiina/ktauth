@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/StellaShiina/ktauth/internal/logctx"
 	"github.com/StellaShiina/ktauth/internal/repository"
 	"github.com/StellaShiina/ktauth/internal/service/admin"
 	"github.com/StellaShiina/ktauth/pkg/iputils"
@@ -49,6 +50,7 @@ func NewUserManageHandler(userManager UserManager) *UserManageHandler {
 func (h *IPRuleHandler) AddRule(c *gin.Context) {
 	var json rule
 	if err := c.ShouldBindJSON(&json); err != nil {
+		logctx.SetReasonDetail(c, logctx.ReasonInvalidBody, err)
 		c.String(http.StatusBadRequest, err.Error())
 		return
 	}
@@ -65,13 +67,16 @@ func (h *IPRuleHandler) AddRule(c *gin.Context) {
 
 	if err != nil {
 		if errors.As(err, &ipe) {
+			logctx.SetReasonDetail(c, logctx.ReasonInvalidIP, err)
 			c.String(http.StatusBadRequest, err.Error())
 			return
 		} else if err == repository.ErrIPExist {
+			logctx.SetReason(c, logctx.ReasonIPRuleExists)
 			c.String(http.StatusBadRequest, err.Error())
 			return
 		} else {
 			slog.Error("failed to add ip rule", "error", err)
+			logctx.SetReasonDetail(c, logctx.ReasonAddIPRuleFailed, err)
 			c.String(http.StatusInternalServerError, err.Error())
 			return
 		}
@@ -104,6 +109,7 @@ func (h *IPRuleHandler) ListRules(c *gin.Context) {
 	rules, err := h.ipRuleManager.ListRules(c.Request.Context(), version, isWhiteList)
 	if err != nil {
 		slog.Error("failed to list ip rules", "error", err)
+		logctx.SetReasonDetail(c, logctx.ReasonListIPRulesFailed, err)
 		c.String(http.StatusInternalServerError, "Server error...")
 		return
 	}
@@ -113,19 +119,23 @@ func (h *IPRuleHandler) ListRules(c *gin.Context) {
 func (h *IPRuleHandler) DelRule(c *gin.Context) {
 	var json rule
 	if err := c.ShouldBindJSON(&json); err != nil {
+		logctx.SetReasonDetail(c, logctx.ReasonInvalidBody, err)
 		c.String(http.StatusBadRequest, err.Error())
 		return
 	}
 	cidr, err := h.ipRuleManager.DelRule(c.Request.Context(), json.IP)
 	if err != nil {
 		if errors.As(err, &ipe) {
+			logctx.SetReasonDetail(c, logctx.ReasonInvalidIP, err)
 			c.String(http.StatusBadRequest, err.Error())
 			return
 		} else if err == repository.ErrIPNotFound {
+			logctx.SetReason(c, logctx.ReasonIPRuleNotFound)
 			c.String(http.StatusBadRequest, err.Error())
 			return
 		}
 		slog.Error("failed to delete ip rule", "error", err)
+		logctx.SetReasonDetail(c, logctx.ReasonDeleteIPRuleFailed, err)
 		c.String(http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -137,6 +147,7 @@ func (h *UserManageHandler) ListUsers(c *gin.Context) {
 	users, err := h.userManager.ListUsers(c.Request.Context())
 	if err != nil {
 		slog.Error("failed to list users", "error", err)
+		logctx.SetReasonDetail(c, logctx.ReasonListUsersFailed, err)
 		c.String(http.StatusInternalServerError, "Server error...")
 		return
 	}
