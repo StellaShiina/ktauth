@@ -3,16 +3,16 @@ name: CI & Release
 on:
   push:
     branches:
-      - main
+    - main
     tags:
-      - "v*"
+    - "v*"
     paths-ignore:
-      - README.md
-      - README_zh-CN.md
-      - LICENSE
-      - install.sh
-      - worker/**
-      - .gitignore
+    - README.md
+    - README_zh-CN.md
+    - LICENSE
+    - install.sh
+    - worker/**
+    - .gitignore
 
 jobs:
   changes:
@@ -20,31 +20,31 @@ jobs:
     outputs:
       integration: ${{ steps.tag.outputs.integration == 'true' || steps.filter.outputs.integration == 'true' }}
     steps:
-      - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
+    - uses: actions/checkout@v5
+      with:
+        fetch-depth: 0
 
-      - name: Enable integration tests for tags
-        id: tag
-        if: startsWith(github.ref, 'refs/tags/')
-        run: echo "integration=true" >> "$GITHUB_OUTPUT"
+    - name: Enable integration tests for tags
+      id: tag
+      if: startsWith(github.ref, 'refs/tags/')
+      run: echo "integration=true" >> "$GITHUB_OUTPUT"
 
-      - name: Detect integration test changes
-        id: filter
-        if: startsWith(github.ref, 'refs/tags/') == false
-        uses: dorny/paths-filter@v3
-        with:
-          filters: |
-            integration:
-              - 'internal/db/**'
-              - 'internal/repository/**'
-              - 'internal/integration/**'
-              - 'sql/**'
-              - 'docker-compose.db.yaml'
-              - 'docker-compose.yaml'
-              - '.env.example'
-              - 'go.mod'
-              - 'go.sum'
+    - name: Detect integration test changes
+      id: filter
+      if: startsWith(github.ref, 'refs/tags/') == false
+      uses: dorny/paths-filter@v4
+      with:
+        filters: |
+          integration:
+            - 'internal/db/**'
+            - 'internal/repository/**'
+            - 'internal/integration/**'
+            - 'sql/**'
+            - 'docker-compose.db.yaml'
+            - 'docker-compose.yaml'
+            - '.env.example'
+            - 'go.mod'
+            - 'go.sum'
 
   go-test:
     runs-on: ubuntu-latest
@@ -52,16 +52,16 @@ jobs:
       run:
         working-directory: .
     steps:
-      - uses: actions/checkout@v5
+    - uses: actions/checkout@v5
 
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version-file: go.mod
-          cache: true
+    - name: Set up Go
+      uses: actions/setup-go@v6
+      with:
+        go-version-file: go.mod
+        cache: true
 
-      - name: Run regular tests
-        run: go test ./...
+    - name: Run regular tests
+      run: go test ./...
 
   integration-test:
     needs: changes
@@ -71,83 +71,83 @@ jobs:
       run:
         working-directory: .
     steps:
-      - uses: actions/checkout@v5
+    - uses: actions/checkout@v5
 
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version-file: go.mod
-          cache: true
+    - name: Set up Go
+      uses: actions/setup-go@v6
+      with:
+        go-version-file: go.mod
+        cache: true
 
-      - name: Start database services
-        run: docker compose -f docker-compose.db.yaml up -d --wait
+    - name: Start database services
+      run: docker compose -f docker-compose.db.yaml up -d --wait
 
-      - name: Run integration tests
-        run: |
-          set -a
-          source .env.example
-          set +a
-          go test -tags=integration ./...
+    - name: Run integration tests
+      run: |
+        set -a
+        source .env.example
+        set +a
+        go test -tags=integration ./...
 
-      - name: Stop database services
-        if: always()
-        run: docker compose -f docker-compose.db.yaml down -v
+    - name: Stop database services
+      if: always()
+      run: docker compose -f docker-compose.db.yaml down -v
 
   create-release:
-    needs: [go-test, integration-test]
+    needs: [ go-test, integration-test ]
     if: startsWith(github.ref, 'refs/tags/') && needs.go-test.result == 'success' && needs.integration-test.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
+    - uses: actions/checkout@v5
+      with:
+        fetch-depth: 0
 
-      - name: Create Release Package
-        run: |
-          mkdir -p dist
-          zip -r dist/ktauth_${{ github.ref_name }}.zip docker-compose.yaml sql/00-init.sql .env.example
+    - name: Create Release Package
+      run: |
+        mkdir -p dist
+        zip -r dist/ktauth_${{ github.ref_name }}.zip docker-compose.yaml sql/00-init.sql .env.example
 
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.ref_name }}
-          name: Release ${{ github.ref_name }}
-          generate_release_notes: true
-          files: |
-            dist/*.zip
-            scripts/install.sh
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ github.ref_name }}
+        name: Release ${{ github.ref_name }}
+        generate_release_notes: true
+        files: |
+          dist/*.zip
+          scripts/install.sh
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   docker:
-    needs: [go-test, integration-test]
+    needs: [ go-test, integration-test ]
     if: startsWith(github.ref, 'refs/tags/') && needs.go-test.result == 'success' && needs.integration-test.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v5
+    - uses: actions/checkout@v5
 
-      - name: Set image tag
-        id: image
-        run: echo "tag=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+    - name: Set image tag
+      id: image
+      run: echo "tag=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/ktauth:${{ steps.image.outputs.tag }}
-            ${{ secrets.DOCKERHUB_USERNAME }}/ktauth:latest
+    - name: Build and push
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        push: true
+        tags: |
+          ${{ secrets.DOCKERHUB_USERNAME }}/ktauth:${{ steps.image.outputs.tag }}
+          ${{ secrets.DOCKERHUB_USERNAME }}/ktauth:latest
