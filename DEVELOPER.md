@@ -1,78 +1,77 @@
-# KTAUTH 开发者文档
+# KTAUTH Developer Guide
 
-> **KTAUTH（簡単auth）** — 基于 Go 的轻量级认证与授权网关服务。
-> 面向开发者的架构设计、模块说明、开发指南与扩展指引。
-
----
-
-## 目录
-
-1. [项目概述](#1-项目概述)
-2. [技术栈与依赖](#2-技术栈与依赖)
-3. [架构设计](#3-架构设计)
-4. [项目结构详解](#4-项目结构详解)
-5. [核心流程](#5-核心流程)
-6. [配置与环境变量](#6-配置与环境变量)
-7. [数据库设计](#7-数据库设计)
-8. [API 接口规范](#8-api-接口规范)
-9. [本地开发环境搭建](#9-本地开发环境搭建)
-10. [测试指南](#10-测试指南)
-11. [构建与部署](#11-构建与部署)
-12. [CI/CD 流水线](#12-cicd-流水线)
-13. [扩展指南](#13-扩展指南)
-14. [代码规范与约定](#14-代码规范与约定)
-15. [路线图](#15-路线图)
+> **KTAUTH（簡単auth）** — A lightweight Go-based authentication and authorization gateway.
+> Architecture design, module reference, development guide, and extension walkthrough for developers.
 
 ---
 
-## 1. 项目概述
+## Table of Contents
 
-KTAUTH 是一个部署在反向代理（Caddy / Nginx）后方的认证网关服务。它的核心职责是：
-
-- **IP 访问控制**：基于黑白灰名单的 IP 级别准入判断
-- **用户认证**：JWT + Redis Session 的用户登录/登出/鉴权
-- **速率限制**：毫秒级滑动窗口算法的请求频控
-- **令牌管理**：基于 Redis Set 的注册邀请码体系
-
-服务监听在 `:51214` 端口，设计上不直接面向公网，而是作为 Caddy `forward_auth` 或 Nginx `auth_request` 的后端子请求目标。
-
-### 设计哲学
-
-- **关注点分离**：严格分层 `Handler → Service → Repository → DB`
-- **无状态 JWT**：结合 Redis 实现可控的会话失效
-- **高性能缓存**：IP 规则带 TTL 的 Redis 缓存，减少数据库查询
-- **原子化操作**：限流和 Abuse 检测通过 Redis Lua 脚本保证原子性
+1. [Project Overview](#1-project-overview)
+2. [Tech Stack & Dependencies](#2-tech-stack--dependencies)
+3. [Architecture Design](#3-architecture-design)
+4. [Project Structure Reference](#4-project-structure-reference)
+5. [Core Workflows](#5-core-workflows)
+6. [Configuration & Environment Variables](#6-configuration--environment-variables)
+7. [Database Design](#7-database-design)
+8. [API Reference](#8-api-reference)
+9. [Local Development Setup](#9-local-development-setup)
+10. [Testing Guide](#10-testing-guide)
+11. [Build & Deployment](#11-build--deployment)
+12. [CI/CD Pipeline](#12-cicd-pipeline)
+13. [Extension Guide](#13-extension-guide)
+14. [Code Conventions](#14-code-conventions)
 
 ---
 
-## 2. 技术栈与依赖
+## 1. Project Overview
 
-| 组件 | 技术选型 | 说明 |
-|------|---------|------|
-| 语言 | Go 1.26+ | 模块路径 `github.com/StellaShiina/ktauth` |
-| Web 框架 | [Gin v1.12](https://github.com/gin-gonic/gin) | HTTP 路由、中间件、参数绑定 |
-| 数据库 | PostgreSQL | 通过 [pgx v5](https://github.com/jackc/pgx) 连接池访问 |
-| 缓存 | Redis | 通过 [go-redis v9](https://github.com/redis/go-redis) 访问 |
-| JWT | [golang-jwt v5](https://github.com/golang-jwt/jwt) | HS256 签名，7 天过期 |
-| 密码 | [bcrypt](https://pkg.go.dev/golang.org/x/crypto/bcrypt) | DefaultCost 哈希 |
-| UUID | [google/uuid](https://github.com/google/uuid) | v4 随机 UUID |
+KTAUTH is an authentication gateway deployed behind reverse proxies (Caddy / Nginx). Its core responsibilities are:
 
-### 完整依赖树（go.mod）
+- **IP Access Control**: Whitelist / blacklist / greylist-based IP-level admission
+- **User Authentication**: JWT + Redis Session for login / logout / authorization
+- **Rate Limiting**: Millisecond-precision sliding window algorithm
+- **Token Management**: Redis Set-based registration invitation code system
+
+The service listens on port `:51214` and is designed to sit behind a reverse proxy as the `forward_auth` (Caddy) or `auth_request` (Nginx) backend target — never directly exposed to the internet.
+
+### Design Philosophy
+
+- **Separation of Concerns**: Strict layering `Handler → Service → Repository → DB`
+- **Stateless JWT**: Combined with Redis for controllable session invalidation
+- **High-Performance Caching**: IP rules cached in Redis with differentiated TTLs
+- **Atomic Operations**: Rate limiting and abuse detection via Redis Lua scripts
+
+---
+
+## 2. Tech Stack & Dependencies
+
+| Component | Choice | Notes |
+|-----------|--------|-------|
+| Language | Go 1.26+ | Module path `github.com/StellaShiina/ktauth` |
+| Web Framework | [Gin v1.12](https://github.com/gin-gonic/gin) | Routing, middleware, request binding |
+| Database | PostgreSQL | Accessed via [pgx v5](https://github.com/jackc/pgx) connection pool |
+| Cache | Redis | Accessed via [go-redis v9](https://github.com/redis/go-redis) |
+| JWT | [golang-jwt v5](https://github.com/golang-jwt/jwt) | HS256 signing, 7-day expiry |
+| Password | [bcrypt](https://pkg.go.dev/golang.org/x/crypto/bcrypt) | DefaultCost hashing |
+| UUID | [google/uuid](https://github.com/google/uuid) | v4 random UUID |
+
+### Full Dependency Tree (go.mod)
 
 ```
-github.com/gin-gonic/gin          # Web 框架
-github.com/golang-jwt/jwt/v5      # JWT 签名/验证
-github.com/google/uuid            # UUID 生成
-github.com/jackc/pgx/v5           # PostgreSQL 驱动 + 连接池
-github.com/redis/go-redis/v9      # Redis 客户端
-golang.org/x/crypto               # bcrypt 密码哈希
+github.com/gin-gonic/gin          # Web framework
+github.com/golang-jwt/jwt/v5      # JWT sign / verify
+github.com/google/uuid            # UUID generation
+github.com/jackc/pgx/v5           # PostgreSQL driver + pool
+github.com/redis/go-redis/v9      # Redis client
+golang.org/x/crypto               # bcrypt password hashing
 ```
 
 ---
 
-## 3. 架构设计
+## 3. Architecture Design
 
-### 3.1 分层架构
+### 3.1 Layered Architecture
 
 ```
 ┌─────────────────────────────────────────┐
@@ -80,79 +79,79 @@ golang.org/x/crypto               # bcrypt 密码哈希
 └─────────────────┬───────────────────────┘
                   │
     ┌─────────────▼─────────────┐
-    │        Middleware          │  ← 请求拦截层
+    │        Middleware          │  ← Request interception
     │  (CheckIP / Auth / Rate)   │
     └─────────────┬─────────────┘
                   │
     ┌─────────────▼─────────────┐
-    │         Handler            │  ← 请求处理层（Controller）
-    │  参数绑定 / 响应构造        │
+    │         Handler            │  ← Controller layer
+    │  Binding / Response        │
     └─────────────┬─────────────┘
                   │
     ┌─────────────▼─────────────┐
-    │         Service            │  ← 业务逻辑层
-    │  编排 Repository 调用       │
+    │         Service            │  ← Business logic
+    │  Orchestrates Repositories │
     └─────────────┬─────────────┘
                   │
     ┌─────────────▼─────────────┐
-    │        Repository          │  ← 数据访问层
-    │  SQL / Redis 命令封装       │
+    │        Repository          │  ← Data access layer
+    │  SQL / Redis commands      │
     └─────────────┬─────────────┘
                   │
     ┌─────────────▼─────────────┐
-    │     PostgreSQL / Redis     │  ← 数据存储层
+    │     PostgreSQL / Redis     │  ← Storage layer
     └───────────────────────────┘
 ```
 
-### 3.2 依赖注入
+### 3.2 Dependency Injection
 
-所有依赖在 `cmd/ktauth/main.go` 中手动组装（无框架 DI）：
+All dependencies are wired manually in `cmd/ktauth/main.go` (no DI framework):
 
 ```go
-// 1. 初始化数据库连接
-redis  := db.NewRedis()
+// 1. Initialize connections
+redis    := db.NewRedis()
 postgres := connectPostgres(30 * time.Second)
 
-// 2. 初始化 Repository
+// 2. Initialize Repositories
 ipRepo    := repository.NewIPRepo(postgres)
 userRepo  := repository.NewUserRepo(postgres)
 tokenRepo := repository.NewTokenRepo(redis)
 // ...
 
-// 3. 初始化 Service（注入 Repository）
+// 3. Initialize Services (inject Repositories)
 ipAccessService := access.NewIPAccessService(ipRepo, ipCache)
 accountService  := identity.NewAccountService(userRepo)
 // ...
 
-// 4. 初始化 Middleware（注入 Service）
+// 4. Initialize Middleware (inject Services)
 checkIPMiddleware := middleware.NewCheckIPMiddleware(ipAccessService)
 
-// 5. 初始化 Handler（注入 Service）
+// 5. Initialize Handlers (inject Services)
 userHandler := handler.NewUserHandler(sessionService, accountService, consumeTokenService)
 
-// 6. 注册路由
+// 6. Register routes
 router.RegisterUserRouter(r, userHandler, checkIPMiddleware, authMiddleWare, rateLimitMiddleware)
 ```
 
-### 3.3 请求处理流水线
+### 3.3 Request Pipeline
 
-以 `POST /api/users/login` 为例：
+Example: `POST /api/users/login`
 
 ```
 Request
   │
   ▼
-[CheckIP Middleware]  ─── 查询 IP 规则（带缓存），黑名单直接 403
+[CheckIP Middleware]  ─── Query IP rule (cache-first), blacklist → 403
   │
   ▼
-[RateLimit Middleware] ─── 滑动窗口限流，白名单 IP 自动跳过
+[RateLimit Middleware] ─── Sliding window check, whitelist IPs auto-skip
   │
   ▼
 [UserHandler.LoginUser]
   │
   ├─► AccountService.GetUserByName()   ──► UserRepo.GetUserByName()  ──► PostgreSQL
-  ├─► crypto.VerifyPassword()         （bcrypt 比对）
-  ├─► auth.SignToken()                （JWT 签发）
+  ├─► crypto.VerifyPassword()         (bcrypt comparison)
+  ├─► auth.SignToken()                (JWT issuance)
   └─► SessionService.CreateSession()  ──► SessionRepo.CreateSession() ──► Redis
   │
   ▼
@@ -161,322 +160,322 @@ Response (200 + JWT token)
 
 ---
 
-## 4. 项目结构详解
+## 4. Project Structure Reference
 
 ```
 ktauth/
-├── cmd/ktauth/main.go              # ★ 应用入口：依赖注入 + 路由注册
+├── cmd/ktauth/main.go              # ★ Entry point: DI + route registration
 ├── internal/
-│   ├── auth/jwt.go                 # JWT 签名（HS256）与解析
+│   ├── auth/jwt.go                 # JWT signing (HS256) & parsing
 │   ├── crypto/
-│   │   ├── password.go             # bcrypt 密码哈希与验证
-│   │   └── rand.go                 # 加密安全的随机数字串生成
+│   │   ├── password.go             # bcrypt hash & verify
+│   │   └── rand.go                 # Crypto-safe random digit generation
 │   ├── db/
-│   │   ├── postgres.go             # PostgreSQL 连接池（pgxpool）
-│   │   └── redis.go                # Redis 客户端初始化
+│   │   ├── postgres.go             # PostgreSQL pool (pgxpool)
+│   │   └── redis.go                # Redis client init
 │   ├── handler/
-│   │   ├── admin_handler.go        # IP 规则管理 + 用户列表 Handler
-│   │   ├── user_handler.go         # 注册 / 登录 / 登出 Handler
-│   │   └── token_handler.go        # Token 管理 Handler
+│   │   ├── admin_handler.go        # IP rule management + user list handlers
+│   │   ├── user_handler.go         # Register / login / logout handlers
+│   │   └── token_handler.go        # Token management handlers
 │   ├── middleware/
-│   │   ├── auth.go                 # JWT Session 验证中间件
-│   │   ├── checkip.go              # IP 黑白灰名单 ACL 中间件
-│   │   └── ratelimit.go            # 速率限制 + Abuse 自动封禁中间件
+│   │   ├── auth.go                 # JWT session verification middleware
+│   │   ├── checkip.go              # IP whitelist/blacklist/greylist ACL middleware
+│   │   └── ratelimit.go            # Rate limiting + abuse auto-ban middleware
 │   ├── model/
-│   │   ├── ip.go                   # IP 规则数据模型 + 类型常量
-│   │   └── user.go                 # User 数据模型
+│   │   ├── ip.go                   # IP rule data model + type constants
+│   │   └── user.go                 # User data model
 │   ├── repository/
-│   │   ├── countdown_repo.go       # 倒计时/冷却 Repository（Redis）
-│   │   ├── ip_repo.go              # IP 规则 CRUD（PostgreSQL）
-│   │   ├── iprule_cache.go         # IP 规则缓存（Redis，带差异化 TTL）
-│   │   ├── ratelimit_repo.go       # 滑动窗口限流（Redis Lua）
-│   │   ├── register_repo.go        # 注册验证码 Repository（Redis）
-│   │   ├── session_repo.go         # JWT 会话 Repository（Redis）
-│   │   ├── token_repo.go           # 邀请 Token Repository（Redis Set）
-│   │   └── user_repo.go            # 用户 CRUD（PostgreSQL）
+│   │   ├── countdown_repo.go       # Cooldown repository (Redis)
+│   │   ├── ip_repo.go              # IP rule CRUD (PostgreSQL)
+│   │   ├── iprule_cache.go         # IP rule cache (Redis, with differentiated TTLs)
+│   │   ├── ratelimit_repo.go       # Sliding window rate limit (Redis Lua)
+│   │   ├── register_repo.go        # Registration verification code repo (Redis)
+│   │   ├── session_repo.go         # JWT session repository (Redis)
+│   │   ├── token_repo.go           # Invitation token repository (Redis Set)
+│   │   └── user_repo.go            # User CRUD (PostgreSQL)
 │   ├── router/
-│   │   ├── admin_router.go         # /api/ips + /api/users（管理）路由
-│   │   ├── token_router.go         # /api/tokens 路由
-│   │   └── user_router.go          # /api/users 路由
+│   │   ├── admin_router.go         # /api/ips + /api/users (admin) routes
+│   │   ├── token_router.go         # /api/tokens routes
+│   │   └── user_router.go          # /api/users routes
 │   └── service/
 │       ├── access/
-│       │   ├── cd.go               # 冷却服务（CountDown）
-│       │   ├── ip.go               # IP 规则查询服务（缓存优先）
-│       │   └── ratelimit.go        # 限流 + Abuse 检测服务
+│       │   ├── cd.go               # Cooldown service
+│       │   ├── ip.go               # IP rule query service (cache-first)
+│       │   └── ratelimit.go        # Rate limit & abuse detection service
 │       ├── admin/
-│       │   ├── manage_iprule.go    # IP 规则管理服务
-│       │   ├── manage_token.go     # Token 管理服务
-│       │   ├── manage_user.go      # 用户管理服务
-│       │   └── types.go            # API 响应类型定义
+│       │   ├── manage_iprule.go    # IP rule admin service
+│       │   ├── manage_token.go     # Token admin service
+│       │   ├── manage_user.go      # User admin service
+│       │   └── types.go            # API response type definitions
 │       └── identity/
-│           ├── account.go          # 账户服务（创建/查询/更新用户）
-│           ├── consume_token.go    # Token 消费服务
-│           └── session.go          # 会话服务（创建/删除/验证）
-├── pkg/iputils/processip.go        # IP 地址解析 + CIDR 规范化工具
+│           ├── account.go          # Account service (create/query/update users)
+│           ├── consume_token.go    # Token consumption service
+│           └── session.go          # Session service (create/delete/verify)
+├── pkg/iputils/processip.go        # IP address parsing + CIDR normalization
 ├── sql/
-│   ├── 00-init.sql                 # 数据库建表 + 初始数据（admin 用户 + 内网白名单）
-│   └── 10-ipdata.sql               # 额外的预置 IP 白名单数据
-├── scripts/install.sh              # 一键部署脚本
-├── docker-compose.yaml             # 生产部署（ktauth + postgres + redis）
-├── docker-compose.db.yaml          # 仅数据库（本地开发用）
-├── docker-compose.test.yaml        # 测试部署（使用本地构建镜像）
-├── .env.example                    # 环境变量模板
-└── .github/workflows/ci.yaml       # CI/CD：测试 + 发布 + Docker 构建
+│   ├── 00-init.sql                 # Schema + seed data (admin user + private IP whitelist)
+│   └── 10-ipdata.sql               # Additional preset IP whitelist data
+├── scripts/install.sh              # One-click deployment script
+├── compose.yaml             # Production stack (ktauth + postgres + redis)
+├── compose.db.yaml          # Database only (local development)
+├── compose.test.yaml        # Test stack (locally built image)
+├── .env.example                    # Environment variable template
+└── .github/workflows/ci.yaml       # CI/CD: test + release + Docker build
 ```
 
 ---
 
-## 5. 核心流程
+## 5. Core Workflows
 
-### 5.1 IP 访问控制流程
+### 5.1 IP Access Control
 
 ```
 Client IP → IPAccessService.QueryRule()
               │
               ├─► iputils.ProcessIP(ipStr)
-              │     单 IP → /32 (IPv4) 或 /64 (IPv6) 掩码
-              │     CIDR → 保持原样
+              │     Single IP → /32 (IPv4) or /64 (IPv6) mask
+              │     CIDR → kept as-is
               │
-              ├─► IPCache.Get(ipNet)          ← Redis 缓存查询
-              │     Hit  → 直接返回规则类型
-              │     Miss → 继续
+              ├─► IPCache.Get(ipNet)            ← Redis cache lookup
+              │     Hit  → return cached rule type
+              │     Miss → continue
               │
-              ├─► IPRepo.QueryIP(version, ip)  ← PostgreSQL 查询
-              │     Found    → 回写 Redis 缓存
-              │     Not Found → 视为 greylist，写缓存（5min TTL）
+              ├─► IPRepo.QueryIP(version, ip)    ← PostgreSQL lookup
+              │     Found    → write back to Redis cache
+              │     Not Found → treat as greylist, cache (5min TTL)
               │
-              └─► 返回 IPRuleType (whitelist/blacklist/greylist)
+              └─► Return IPRuleType (whitelist/blacklist/greylist)
 ```
 
-**缓存 TTL 策略：**
+**Cache TTL Strategy:**
 
-| 规则类型 | TTL | 原因 |
-|---------|-----|------|
-| Blacklist | 1 小时 | 需快速拒绝，变化少 |
-| Whitelist | 30 分钟 | 需快速放行 |
-| Greylist | 5 分钟 | 默认状态，变化可能性大 |
+| Rule Type | TTL | Rationale |
+|-----------|-----|-----------|
+| Blacklist | 1 hour | Needs fast rejection, rarely changes |
+| Whitelist | 30 minutes | Needs fast allowance |
+| Greylist | 5 minutes | Default state, likely to change |
 
-### 5.2 JWT 认证流程
+### 5.2 JWT Authentication
 
 ```
-登录请求
+Login Request
   │
-  ├─► AccountService.GetUserByName()  查询用户
-  ├─► crypto.VerifyPassword()         验证密码
+  ├─► AccountService.GetUserByName()  Query user
+  ├─► crypto.VerifyPassword()        Verify password
   ├─► auth.SignToken(uuid, name, role)
-  │     └─► 生成 JWT（HS256，7 天过期）
+  │     └─► Generate JWT (HS256, 7-day expiry)
   │         Claims: { UUID, Name, Role, jti, exp, iat, iss }
   │
   └─► SessionService.CreateSession(uuid, jti)
         └─► Redis SET "jwt:active:{uuid}:{jti}" = uuid (144h TTL)
 
-后续请求
+Subsequent Requests
   │
   ├─► AuthMiddleWare.VerifySession()
-  │     ├─► 提取 Authorization: Bearer <token>
-  │     ├─► auth.ParseToken() 解析 JWT
-  │     └─► SessionService.GetSession(uuid, jti)  Redis 验证
-  │          存在 → 认证通过，设置 ctx uuid/jti
-  │          不存在 → 401（会话已失效/登出）
+  │     ├─► Extract Authorization: Bearer <token>
+  │     ├─► auth.ParseToken() parse JWT
+  │     └─► SessionService.GetSession(uuid, jti)  Redis verification
+  │          Exists → authenticated, set ctx uuid/jti
+  │          Missing → 401 (session invalidated / logged out)
 ```
 
-### 5.3 滑动窗口限流算法
+### 5.3 Sliding Window Rate Limiting
 
-实现在 `ratelimit_repo.go` 的 Lua 脚本中：
+Implemented in `ratelimit_repo.go` via Lua script:
 
 ```lua
--- 1. 清理窗口外的旧记录
+-- 1. Remove entries outside the sliding window
 ZREMRANGEBYSCORE key '-inf' (now - window)
 
--- 2. 统计窗口内请求数
+-- 2. Count requests in current window
 count = ZCARD key
 
--- 3. 判断
+-- 3. Decision
 if count < limit then
-    ZADD key now member    -- 记录本次请求（score=时间戳, member=UUID）
-    PEXPIRE key window     -- 刷新 Key 过期时间
-    return 1               -- 允许
+    ZADD key now member    -- Record this request (score=timestamp, member=UUID)
+    PEXPIRE key window     -- Refresh key TTL
+    return 1               -- Allowed
 else
-    return 0               -- 拒绝
+    return 0               -- Denied
 end
 ```
 
-**特点：**
-- 使用 Redis Sorted Set（ZSET），score 为毫秒时间戳
-- member 用随机 UUID 防止同一毫秒内重复请求互相覆盖
-- 原子化操作，无需分布式锁
-- 默认 60 次/分钟，可在 `.env` 中配置
+**Characteristics:**
+- Uses Redis Sorted Set (ZSET), score = millisecond timestamp
+- Member is a random UUID to prevent overwrites from same-millisecond requests
+- Atomic execution, no distributed lock required
+- Default: 60 req/min, configurable via `.env`
 
-### 5.4 Abuse 自动封禁机制
+### 5.4 Abuse Auto-Ban
 
-当请求被限流返回 429 后，中间件会额外执行 abuse 检测：
+When a request is rate-limited (429), the middleware additionally checks for abuse:
 
 ```go
-// ratelimit.go 中间件
+// ratelimit.go middleware
 if !allow {
     c.String(http.StatusTooManyRequests, "Rate limit exceed!")
-    // 检测 abuse
+    // Check abuse
     if abuse, err := m.rateLimitService.Abuse(ctx, ip); err == nil && abuse {
-        // 自动加入黑名单
+        // Auto-add to blacklist
         m.adminIPRuleService.AddRule(ctx, ip, false, &note)
     }
 }
 ```
 
-Abuse 检测使用 Redis INCR + EXPIRE 模式：
+Abuse detection uses Redis INCR + EXPIRE:
 - Key: `abuse:429:{cidr}`
-- 默认：5 分钟内收到 100 次 429 → 触发自动封禁
-- 触发后自动清除计数 Key，下次重新计数
+- Default: 100 × 429 within 5 minutes → triggers auto-ban
+- After trigger, the counter key is automatically deleted; next detection starts fresh
 
-### 5.5 注册凭据体系
+### 5.5 Registration Credential System
 
 ```
-注册流程：
+Registration Flow:
   POST /api/users/register { token, user, password }
     │
-    ├─ token 非空 ► ConsumeTokenService.Consume(token)
+    ├─ non-empty token ► ConsumeTokenService.Consume(token)
     │     └─► Redis SREM "admin:tokens" token
-    │           成功（n > 0）→ Token 有效，已消费
-    │           失败（n = 0）→ Token 无效或已被使用
+    │           Success (n > 0) → Token valid, consumed
+    │           Failure (n = 0) → Token invalid or already used
     │
-    ├─ 无 token ► EmailService.VerifyCode(email, code)
+    ├─ no token ► EmailService.VerifyCode(email, code)
     │     └─► Redis GETDEL "register:{email}:{code}"
-    │           成功 → 验证码有效，已消费
-    │           失败 → 验证码无效或已被使用
+    │           Success → Code valid, consumed
+    │           Failure → Code invalid or already used
     │
     └─► AccountService.NewUser() → PostgreSQL INSERT
 
-同时提供 token 和邮箱验证码时，优先验证 token。
+When both methods are supplied, the token takes precedence.
 
-管理员操作：
-  GET  /api/tokens/restock  → 批量生成 10 个 UUID Token 到 Redis Set
-  GET  /api/tokens          → 随机获取一个未使用的 Token
-  GET  /api/tokens/all      → 列出所有可用 Token
-  DELETE /api/tokens/flush   → 清空所有 Token
+Admin Operations:
+  GET   /api/tokens/restock  → Bulk-generate 10 UUID tokens into Redis Set
+  GET   /api/tokens          → Randomly fetch one unused token
+  GET   /api/tokens/all      → List all available tokens
+  DELETE /api/tokens/flush    → Clear all tokens
 ```
 
 ---
 
-## 6. 配置与环境变量
+## 6. Configuration & Environment Variables
 
-### 6.1 环境变量一览
+### 6.1 Environment Variables
 
-| 变量名 | 默认值 | 说明 |
-|--------|--------|------|
-| `ADMIN_NAME` | `admin` | 管理员用户名 |
-| `ADMIN_PASSWD` | `admin` | 管理员密码（bcrypt 加密后存储） |
-| `JWT_SECRET` | `ktauthsecret` | JWT 签名密钥（HS256） |
-| `RATELIMIT` | `60` | 每分钟允许的请求数 |
-| `ENABLE_RATELIMIT` | 空（启用） | 设为 `NO` 禁用限流 |
-| `ABUSELIMIT` | `100` | 触发自动封禁的 429 次数阈值 |
-| `ABUSEWINDOW` | `5` | Abuse 检测时间窗口（分钟） |
-| `LOGLEVEL` | `warn` | 日志级别：`debug` / `info` / `warn` / `error` |
-| `SMTP_HOST` | - | SMTP 服务器主机名 |
-| `SMTP_PORT` | `587` | SMTP Submission 端口 |
-| `SMTP_USERNAME` | - | SMTP 登录用户名；留空则不认证 |
-| `SMTP_PASSWORD` | - | SMTP 登录密码 |
-| `SMTP_FROM` | - | 发件人地址，可使用 `KTAUTH <ktauth@example.com>` 格式 |
-| `REDIS_HOST` | `127.0.0.1` | Redis 连接地址 |
-| `POSTGRES_HOST` | `127.0.0.1` | PostgreSQL 连接地址 |
-| `POSTGRES_PORT` | `5432` | PostgreSQL 端口 |
-| `GIN_MODE` | - | Gin 运行模式（设为 `release` 启用生产模式） |
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ADMIN_NAME` | `admin` | Admin username |
+| `ADMIN_PASSWD` | `admin` | Admin password (stored as bcrypt hash) |
+| `JWT_SECRET` | `ktauthsecret` | JWT signing key (HS256) |
+| `RATELIMIT` | `60` | Allowed requests per minute |
+| `ENABLE_RATELIMIT` | (empty = enabled) | Set to `NO` to disable rate limiting |
+| `ABUSELIMIT` | `100` | 429 count threshold for auto-ban |
+| `ABUSEWINDOW` | `5` | Abuse detection window (minutes) |
+| `LOGLEVEL` | `warn` | Log level: `debug` / `info` / `warn` / `error` |
+| `SMTP_HOST` | - | SMTP server hostname |
+| `SMTP_PORT` | `587` | SMTP submission port |
+| `SMTP_USERNAME` | - | SMTP username; empty disables authentication |
+| `SMTP_PASSWORD` | - | SMTP password |
+| `SMTP_FROM` | - | Sender address; `KTAUTH <ktauth@example.com>` is supported |
+| `REDIS_HOST` | `127.0.0.1` | Redis host |
+| `POSTGRES_HOST` | `127.0.0.1` | PostgreSQL host |
+| `POSTGRES_PORT` | `5432` | PostgreSQL port |
+| `GIN_MODE` | - | Gin mode (set `release` for production) |
 
-### 6.2 硬编码常量
+### 6.2 Hardcoded Constants
 
-以下值目前硬编码在源码中，修改需要改代码：
+The following are currently hardcoded; changes require modifying source:
 
-| 位置 | 常量 | 值 | 说明 |
-|------|------|----|------|
-| `auth/jwt.go` | Token 过期时间 | 168 小时（7 天） | JWT exp |
-| `cmd/ktauth/main.go` | 监听端口 | `:51214` | Gin Run 地址 |
-| `db/postgres.go` | 数据库凭据 | `ktauth:ktauth` | PostgreSQL 用户/密码/库名 |
-| `session_repo.go` | Session TTL | 144 小时（6 天） | Redis Key 过期 |
-| `ratelimit_repo.go` | 滑动窗口 | 1 分钟 | Rate Limit 窗口大小 |
+| Location | Constant | Value | Description |
+|----------|----------|-------|-------------|
+| `auth/jwt.go` | Token expiry | 168 hours (7 days) | JWT exp |
+| `cmd/ktauth/main.go` | Listen port | `:51214` | Gin Run address |
+| `db/postgres.go` | DB credentials | `ktauth:ktauth` | PostgreSQL user/pass/dbname |
+| `session_repo.go` | Session TTL | 144 hours (6 days) | Redis key expiry |
+| `ratelimit_repo.go` | Sliding window | 1 minute | Rate limit window size |
 
 ---
 
-## 7. 数据库设计
+## 7. Database Design
 
-### 7.1 PostgreSQL 表结构
+### 7.1 PostgreSQL Schema
 
-#### `users` 表
+#### `users` Table
 
 ```sql
 CREATE TABLE users (
-    uuid          UUID PRIMARY KEY,           -- 用户唯一标识
-    name          VARCHAR(64) NOT NULL UNIQUE, -- 用户名
-    password_hash CHAR(60) NOT NULL,           -- bcrypt 哈希（固定 60 字符）
-    email         VARCHAR(255) UNIQUE,         -- 邮箱（可选）
-    role          VARCHAR(32) NOT NULL DEFAULT 'user' -- 角色：user / admin
+    uuid          UUID PRIMARY KEY,              -- Unique user identifier
+    name          VARCHAR(64) NOT NULL UNIQUE,    -- Username
+    password_hash CHAR(60) NOT NULL,              -- bcrypt hash (fixed 60 chars)
+    email         VARCHAR(255) UNIQUE,            -- Email (optional)
+    role          VARCHAR(32) NOT NULL DEFAULT 'user' -- Role: user / admin
 );
 ```
 
-**内置管理员：**
+**Built-in admin:**
 - UUID: `00000000-0000-0000-0000-000000000000`
-- 默认密码: `admin`（bcrypt hash）
+- Default password: `admin` (bcrypt hashed)
 
-#### `ip` 表
+#### `ip` Table
 
 ```sql
 CREATE TABLE ip (
-    id           BIGSERIAL PRIMARY KEY,       -- 自增主键
-    version      SMALLINT NOT NULL,            -- IP 版本：4 或 6
-    ip_range     CIDR NOT NULL UNIQUE,         -- IP/CIDR 范围（PostgreSQL CIDR 类型）
-    is_whitelist BOOLEAN NOT NULL,             -- true=白名单, false=黑名单
-    create_at    TIMESTAMPTZ DEFAULT NOW(),    -- 创建时间
-    update_at    TIMESTAMPTZ DEFAULT NOW(),    -- 更新时间（触发器自动维护）
-    note         TEXT                           -- 备注
+    id           BIGSERIAL PRIMARY KEY,          -- Auto-increment ID
+    version      SMALLINT NOT NULL,               -- IP version: 4 or 6
+    ip_range     CIDR NOT NULL UNIQUE,            -- IP/CIDR range (PostgreSQL CIDR type)
+    is_whitelist BOOLEAN NOT NULL,                -- true=whitelist, false=blacklist
+    create_at    TIMESTAMPTZ DEFAULT NOW(),       -- Created at
+    update_at    TIMESTAMPTZ DEFAULT NOW(),       -- Updated at (auto-maintained by trigger)
+    note         TEXT                              -- Remark
 );
 ```
 
-**IP 匹配使用 PostgreSQL CIDR 包含运算符 `<<=`：**
+**IP matching uses PostgreSQL CIDR containment operator `<<=`**:
 ```sql
 SELECT is_whitelist FROM ip
 WHERE version = $1 AND $2::inet <<= ip_range
 ```
 
-**内置规则（00-init.sql）：**
-- `127.0.0.0/8` — localhost 白名单
-- `10.0.0.0/8` — A 类私有地址白名单
-- `192.168.0.0/16` — C 类私有地址白名单
-- `172.16.0.0/12` — B 类私有地址白名单
+**Built-in rules (00-init.sql):**
+- `127.0.0.0/8` — localhost whitelist
+- `10.0.0.0/8` — Class A private whitelist
+- `192.168.0.0/16` — Class C private whitelist
+- `172.16.0.0/12` — Class B private whitelist
 
-### 7.2 Redis 数据结构
+### 7.2 Redis Data Structures
 
-| Key Pattern | 类型 | 值 | TTL | 说明 |
-|-------------|------|----|----|------|
-| `jwt:active:{uuid}:{jti}` | String | uuid | 144h | JWT 会话 |
-| `rule:ip:{cidr}` | String | "whitelist" / "blacklist" / "greylist" | 30min / 1h / 5min | IP 规则缓存 |
-| `ratelimit:ip:{cidr}` | ZSET | member(UUID) → score(ms) | 窗口大小 | 滑动窗口计数 |
-| `abuse:429:{cidr}` | String (counter) | 计数值 | ABUSEWINDOW | Abuse 检测 |
-| `admin:tokens` | Set | UUID strings | 永久 | 注册邀请码池 |
-| `register:{email}:{code}` | String | "" | 15min | 一次性邮箱验证码 |
-| `{email}` | String | "" | 1min | 邮箱验证码发送冷却 |
+| Key Pattern | Type | Value | TTL | Purpose |
+|-------------|------|-------|-----|---------|
+| `jwt:active:{uuid}:{jti}` | String | uuid | 144h | JWT session |
+| `rule:ip:{cidr}` | String | "whitelist" / "blacklist" / "greylist" | 30min / 1h / 5min | IP rule cache |
+| `ratelimit:ip:{cidr}` | ZSET | member(UUID) → score(ms) | window size | Sliding window counter |
+| `abuse:429:{cidr}` | String (counter) | count | ABUSEWINDOW | Abuse detection |
+| `admin:tokens` | Set | UUID strings | ∞ | Registration invitation pool |
+| `register:{email}:{code}` | String | "" | 15min | Single-use email verification code |
+| `{email}` | String | "" | 1min | Email code sending cooldown |
 
 ---
 
-## 8. API 接口规范
+## 8. API Reference
 
-### 8.1 核心认证端点（反向代理用）
+### 8.1 Core Auth Endpoints (for Reverse Proxy)
 
-| 方法 | 路径 | 说明 | 返回 |
-|------|------|------|------|
-| `GET` | `/kt/0` | 综合认证：黑名单拒，非白名单限速 | `204 No Content` / `403 Forbidden` / `429 Too Many Requests` |
-| `GET` | `/kt/1` | 严格认证：仅白名单放行 | `204 No Content` / `403 Forbidden` |
+| Method | Path | Description | Response |
+|--------|------|-------------|----------|
+| `GET` | `/kt/0` | Comprehensive auth: deny blacklist, rate-limit non-whitelist | `204 No Content` / `403 Forbidden` / `429 Too Many Requests` |
+| `GET` | `/kt/1` | Strict auth: whitelist only | `204 No Content` / `403 Forbidden` |
 
-### 8.2 用户接口
+### 8.2 User Endpoints
 
-| 方法 | 路径 | 鉴权 | 说明 |
-|------|------|------|------|
-| `POST` | `/api/users/register` | Token 或邮箱验证码 | 用户注册；同时提供时优先 Token |
-| `POST` | `/api/users/send-code` | 无 | 发送 6 位邮箱验证码 |
-| `POST` | `/api/users/verify-code` | 无 | 验证并消费邮箱验证码 |
-| `POST` | `/api/users/login` | 无 | 用户登录，返回 JWT |
-| `GET` | `/api/users/auth` | Bearer JWT | 验证登录状态，`204` 表示有效 |
-| `GET` | `/api/users/logout` | Bearer JWT | 登出当前会话 |
-| `GET` | `/api/users` | Admin + 白名单 | 列出所有用户 |
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `POST` | `/api/users/register` | Token or email code | Register; token takes precedence when both are supplied |
+| `POST` | `/api/users/send-code` | None | Send a six-digit email verification code |
+| `POST` | `/api/users/verify-code` | None | Verify and consume an email code |
+| `POST` | `/api/users/login` | None | Login, returns JWT |
+| `GET` | `/api/users/auth` | Bearer JWT | Verify session, `204` = valid |
+| `GET` | `/api/users/logout` | Bearer JWT | Logout current session |
+| `GET` | `/api/users` | Admin + whitelist | List all users |
 
-**注册请求体：**
+**Register request body:**
 ```json
 {
   "user": "username",
@@ -486,19 +485,19 @@ WHERE version = $1 AND $2::inet <<= ip_range
 }
 ```
 
-也可使用邀请码，将 `email`、`code` 替换为 `"token": "uuid-token"`；如果同时提供，优先验证 `token`。验证码有效期为 15 分钟且只能使用一次，独立验证接口成功后也会消费验证码。
+To use an invitation, replace `email` and `code` with `"token": "uuid-token"`. If both methods are supplied, `token` takes precedence. Codes expire after 15 minutes and are single-use; successful standalone verification also consumes the code.
 
-**发送验证码请求体：**
+**Send-code request body:**
 ```json
 { "email": "user@example.com" }
 ```
 
-**独立验证请求体：**
+**Standalone verification request body:**
 ```json
 { "email": "user@example.com", "code": "123456" }
 ```
 
-**登录请求体：**
+**Login request body:**
 ```json
 {
   "user": "username",
@@ -506,30 +505,30 @@ WHERE version = $1 AND $2::inet <<= ip_range
 }
 ```
 
-**登录响应：**
+**Login response:**
 ```json
 { "token": "eyJhbGciOi..." }
 ```
-或 `?format=string` → 纯文本 Token
+Or `?format=string` → plain text token
 
-### 8.3 Token 管理接口（管理员）
+### 8.3 Token Management Endpoints (Admin)
 
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| `GET` | `/api/tokens/restock` | 批量生成 10 个 Token |
-| `DELETE` | `/api/tokens/flush` | 清空所有 Token |
-| `GET` | `/api/tokens` | 随机获取一个 Token |
-| `GET` | `/api/tokens/all` | 列出所有可用 Token |
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/tokens/restock` | Bulk-generate 10 tokens |
+| `DELETE` | `/api/tokens/flush` | Clear all tokens |
+| `GET` | `/api/tokens` | Randomly fetch one token |
+| `GET` | `/api/tokens/all` | List all available tokens |
 
-### 8.4 IP 规则管理接口（管理员）
+### 8.4 IP Rule Management Endpoints (Admin)
 
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| `GET` | `/api/ips` | 列出 IP 规则（支持 `?version=4/6&type=white/black` 过滤） |
-| `POST` | `/api/ips/new` | 添加 IP 规则 |
-| `DELETE` | `/api/ips` | 删除 IP 规则 |
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/ips` | List IP rules (supports `?version=4/6&type=white/black` filters) |
+| `POST` | `/api/ips/new` | Add IP rule |
+| `DELETE` | `/api/ips` | Delete IP rule |
 
-**添加规则请求体：**
+**Add rule request body:**
 ```json
 {
   "ip": "192.168.1.0/24",
@@ -540,103 +539,103 @@ WHERE version = $1 AND $2::inet <<= ip_range
 
 ---
 
-## 9. 本地开发环境搭建
+## 9. Local Development Setup
 
-### 9.1 前置要求
+### 9.1 Prerequisites
 
 - Go 1.26+
-- Docker & Docker Compose（用于启动 PostgreSQL 和 Redis）
+- Docker & Docker Compose (for PostgreSQL and Redis)
 
-### 9.2 快速启动
+### 9.2 Quick Start
 
 ```bash
-# 1. 克隆仓库
+# 1. Clone the repo
 git clone https://github.com/StellaShiina/ktauth.git
 cd ktauth
 
-# 2. 仅启动数据库（PostgreSQL + Redis）
-docker compose -f docker-compose.db.yaml up -d
+# 2. Start databases only (PostgreSQL + Redis)
+docker compose -f compose.db.yaml up -d
 
-# 3. 复制环境变量配置
+# 3. Copy environment config
 cp .env.example .env
-# 按需编辑 .env
+# Edit .env as needed
 
-# 4. 运行应用
+# 4. Run the app
 go run ./cmd/ktauth
 
-# 或者构建后运行
-go build -o ktauth.exe ./cmd/ktauth
-./ktauth.exe
+# Or build then run
+go build -o ktauth ./cmd/ktauth
+./ktauth
 ```
 
-### 9.3 开发工作流建议
+### 9.3 Suggested Dev Workflow
 
 ```bash
-# 运行所有测试
+# Run all tests
 go test ./...
 
-# 运行特定包的测试
+# Run specific package tests
 go test ./internal/repository/ -v
 go test ./pkg/iputils/ -v
 
-# 带竞态检测
+# With race detector
 go test -race ./...
 
-# 代码格式化
+# Format code
 go fmt ./...
 
-# 依赖管理
+# Dependency management
 go mod tidy
 go mod verify
 ```
 
 ---
 
-## 10. 测试指南
+## 10. Testing Guide
 
-### 10.1 测试文件组织
+### 10.1 Test File Organization
 
 ```
-internal/db/postgres_test.go                # DB 连接测试
-internal/repository/ip_repo_test.go         # IP Repository 测试
-internal/repository/user_repo_test.go       # User Repository 测试
-internal/service/admin/manage_iprule_test.go # IP 管理服务测试
-pkg/iputils/processip_test.go               # IP 工具函数测试
+internal/db/postgres_test.go                # DB connection test
+internal/repository/ip_repo_test.go         # IP Repository tests
+internal/repository/user_repo_test.go       # User Repository tests
+internal/service/admin/manage_iprule_test.go # IP admin service tests
+pkg/iputils/processip_test.go               # IP utility tests
 ```
 
-### 10.2 运行测试
+### 10.2 Running Tests
 
-测试依赖真实的 PostgreSQL 和 Redis 实例：
+Tests require real PostgreSQL and Redis instances:
 
 ```bash
-# 启动测试数据库
-docker compose -f docker-compose.db.yaml up -d
+# Start test databases
+docker compose -f compose.db.yaml up -d
 
-# 运行全部测试
+# Run all tests
 go test ./... -v
 
-# CI 中也用同样方式：
-# docker compose -f ./docker-compose.db.yaml up -d
+# CI uses the same approach:
+# docker compose -f ./compose.db.yaml up -d
 # go test ./...
 ```
 
-### 10.3 测试覆盖范围
+### 10.3 Test Coverage
 
-| 测试文件 | 覆盖内容 |
-|---------|---------|
-| `processip_test.go` | IPv4/IPv6 解析、CIDR 规范化、非法输入 |
-| `postgres_test.go` | 数据库连接验证 |
-| `ip_repo_test.go` | IP 规则增删改查、重复检测、不存在检测 |
-| `user_repo_test.go` | 用户增删改查、重复检测、不存在检测 |
-| `manage_iprule_test.go` | IP 管理服务（Add/Del/List）+ 缓存联动 |
+| Test File | Coverage |
+|-----------|----------|
+| `processip_test.go` | IPv4/IPv6 parsing, CIDR normalization, invalid input |
+| `postgres_test.go` | Database connection verification |
+| `ip_repo_test.go` | IP rule CRUD, duplicate detection, not-found detection |
+| `user_repo_test.go` | User CRUD, duplicate detection, not-found detection |
+| `manage_iprule_test.go` | IP admin service (Add/Del/List) + cache invalidation |
 
-### 10.4 编写新测试
+### 10.4 Writing New Tests
 
-约定：
-- 测试包名使用 `{package}_test`（黑盒测试）
-- 测试函数名：`Test{FunctionName}`
-- 使用标准库 `testing`，不使用第三方断言库
-- 测试后清理数据（参见 `user_repo_test.go` 的 `DelUser` 清理模式）
+Conventions:
+- Test package name: `{package}_test` (black-box testing)
+- Test function name: `Test{FunctionName}`
+- Use standard `testing` package; no third-party assertion libraries
+- Clean up data after tests (see the `DelUser` cleanup pattern in `user_repo_test.go`)
 
 ```go
 func TestNewFeature(t *testing.T) {
@@ -660,39 +659,39 @@ func TestNewFeature(t *testing.T) {
 
 ---
 
-## 11. 构建与部署
+## 11. Build & Deployment
 
-### 11.1 本地构建
+### 11.1 Local Build
 
 ```bash
-# 开发构建
-go build -o ktauth.exe ./cmd/ktauth
+# Development build
+go build -o ktauth ./cmd/ktauth
 
-# 生产构建（Linux 交叉编译）
+# Production build (Linux cross-compile)
 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o ktauth ./cmd/ktauth
 ```
 
-### 11.2 Docker 部署
+### 11.2 Docker Deployment
 
-**生产部署（从 Docker Hub 拉取镜像）：**
+**Production (pull image from Docker Hub):**
 
 ```bash
 cp .env.example .env
-# 编辑 .env 配置
+# Edit .env configuration
 docker compose up -d
 ```
 
-**测试部署（使用本地构建镜像）：**
+**Testing (local image build):**
 
 ```bash
-# 先构建本地镜像
+# Build local image first
 docker build -t ktauth:test .
 
-# 使用测试 compose 文件
-docker compose -f docker-compose.test.yaml up -d
+# Use test compose file
+docker compose -f compose.test.yaml up -d
 ```
 
-### 11.3 Caddy 集成示例
+### 11.3 Caddy Integration
 
 ```caddyfile
 example.com {
@@ -703,7 +702,7 @@ example.com {
 }
 ```
 
-### 11.4 Nginx 集成示例
+### 11.4 Nginx Integration
 
 ```nginx
 server {
@@ -727,70 +726,70 @@ server {
 
 ---
 
-## 12. CI/CD 流水线
+## 12. CI/CD Pipeline
 
-定义在 `.github/workflows/ci.yaml`，触发条件：
+Defined in `.github/workflows/ci.yaml`. Triggers:
 
-- **Push 到 `main` 分支** → 运行测试
-- **推送 `v*` 标签** → 测试 → 创建 Release + 构建 Docker 镜像
+- **Push to `main` branch** → run tests
+- **Push `v*` tag** → tests → create Release + build Docker image
 
-### 流水线步骤
+### Pipeline Steps
 
 ```
 ┌──────────────────┐
 │   go-test Job    │
-│  1. 启动 DB 容器  │
-│  2. 安装 Go 1.26 │
-│  3. go test ./... │
+│  1. Start DB     │
+│  2. Install Go   │
+│  3. go test ./.. │
 └────────┬─────────┘
-         │ (仅 tag 触发)
+         │ (tag only)
     ┌────┴────┐
     │         │
     ▼         ▼
 ┌────────┐ ┌──────────┐
 │ Release│ │  Docker  │
-│ 打包zip│ │ 构建推送  │
+│ Zip    │ │ Build+Push│
 └────────┘ └──────────┘
 ```
 
-**Release 产物：**
-- `ktauth_{version}.zip`（包含 `docker-compose.yaml`、`00-init.sql`、`.env.example`）
-- `install.sh` 安装脚本
+**Release artifacts:**
+- `ktauth_{version}.zip` (contains `compose.yaml`, `00-init.sql`, `.env.example`)
+- `install.sh` script
 
-**Docker 镜像标签：**
+**Docker image tags:**
 - `stellashiina/ktauth:{version}`
 - `stellashiina/ktauth:latest`
 
 ---
 
-## 13. 扩展指南
+## 13. Extension Guide
 
-### 13.1 添加新的 API 端点
+### 13.1 Adding a New API Endpoint
 
-1. **定义 Handler** → `internal/handler/`
-2. **定义 Service（如需业务逻辑）** → `internal/service/`
-3. **定义 Repository（如需数据访问）** → `internal/repository/`
-4. **注册路由** → `internal/router/`
-5. **在 `main.go` 中组装依赖**
+1. **Define Handler** → `internal/handler/`
+2. **Define Service (if business logic needed)** → `internal/service/`
+3. **Define Repository (if data access needed)** → `internal/repository/`
+4. **Register route** → `internal/router/`
+5. **Wire dependencies** → `cmd/ktauth/main.go`
 
-**示例：添加 "重置密码" 端点**
+**Example: Adding a "Reset Password" endpoint**
 
 ```go
-// internal/handler/user_handler.go 添加方法
+// internal/handler/user_handler.go — add method
 func (h *UserHandler) ResetPassword(c *gin.Context) {
-    // 获取当前用户 UUID（中间件注入）
+    // Get current user UUID (injected by middleware)
     uuid := c.GetString("uuid")
-    // 解析请求体...
-    // 调用 service...
+    // Parse request body...
+    // Call service...
 }
 
-// internal/router/user_router.go 注册路由
+// internal/router/user_router.go — register route
 user.POST("/reset-password", h.ResetPassword)
 ```
 
-### 13.2 添加新的中间件
+### 13.2 Adding a New Middleware
 
-中间件遵循 Gin 的 `gin.HandlerFunc` 签名：
+Middleware follows Gin's `gin.HandlerFunc` signature:
 
 ```go
 func NewMyMiddleware(dep *SomeDependency) *MyMiddleware {
@@ -799,117 +798,117 @@ func NewMyMiddleware(dep *SomeDependency) *MyMiddleware {
 
 func (m *MyMiddleware) Handle() gin.HandlerFunc {
     return func(c *gin.Context) {
-        // 前置处理
+        // Pre-processing
         // ...
 
         c.Next()
 
-        // 后置处理（可选）
+        // Post-processing (optional)
         // ...
     }
 }
 ```
 
-在 `main.go` 中实例化并应用到路由：
+Wire it in `main.go` and apply:
 
 ```go
 myMiddleware := middleware.NewMyMiddleware(dep)
-r.Use(myMiddleware.Handle())  // 全局应用
-// 或
-g := r.Group("/api/xxx", myMiddleware.Handle())  // 分组应用
+r.Use(myMiddleware.Handle())  // Global
+// or
+g := r.Group("/api/xxx", myMiddleware.Handle())  // Scoped
 ```
 
-### 13.3 添加新的配置项
+### 13.3 Adding a New Config Option
 
-1. 在 `.env.example` 添加变量
-2. 在 `cmd/ktauth/main.go` 的 `main()` 中读取（`os.Getenv()`）
-3. 传递给需要的 Service/Middleware
-4. 更新本文档的「配置」章节
+1. Add the variable to `.env.example`
+2. Read it in `cmd/ktauth/main.go` (`os.Getenv()`)
+3. Pass it to the Service/Middleware that needs it
+4. Update this document's configuration section
 
-### 13.4 邮箱验证实现
+### 13.4 Email Verification Implementation
 
-`EmailService` 使用 Go 标准库 `net/smtp` 发送 HTML 邮件。验证码由 `crypto/rand` 生成，存入 Redis 15 分钟，并通过 `CountDownRepo` 限制同一邮箱每分钟发送一次。验证码使用 `GETDEL` 原子验证并消费。
+`EmailService` sends HTML email through Go's standard `net/smtp` package. Codes are generated with `crypto/rand`, stored in Redis for 15 minutes, and limited to one send per email per minute through `CountDownRepo`. Verification atomically validates and consumes the code with `GETDEL`.
 
 ---
 
-## 14. 代码规范与约定
+## 14. Code Conventions
 
-### 14.1 命名规范
+### 14.1 Naming
 
-| 类型 | 约定 | 示例 |
-|------|------|------|
-| 包名 | 小写，简短 | `iputils`, `access`, `identity` |
-| 文件名 | snake_case | `user_repo.go`, `manage_iprule.go` |
-| 结构体 | PascalCase | `IPAccessService`, `RateLimitRepo` |
-| 方法 | PascalCase（导出）/ camelCase（私有） | `QueryRule()`, `connectPostgres()` |
-| 变量 | camelCase | `ipRepo`, `isWhitelist` |
-| 常量 | PascalCase 或 UPPER_SNAKE | `IPWhiteList`, `ErrIPNotFound` |
-| 错误变量 | `Err` 前缀 | `ErrUserNotFound`, `ErrIPExist` |
+| Kind | Convention | Example |
+|------|-----------|---------|
+| Package | lowercase, short | `iputils`, `access`, `identity` |
+| File | snake_case | `user_repo.go`, `manage_iprule.go` |
+| Struct | PascalCase | `IPAccessService`, `RateLimitRepo` |
+| Method | PascalCase (exported) / camelCase (unexported) | `QueryRule()`, `connectPostgres()` |
+| Variable | camelCase | `ipRepo`, `isWhitelist` |
+| Constant | PascalCase or UPPER_SNAKE | `IPWhiteList`, `ErrIPNotFound` |
+| Error var | `Err` prefix | `ErrUserNotFound`, `ErrIPExist` |
 
-### 14.2 项目规范
+### 14.2 Project Standards
 
-- **错误处理**：Repository 层定义哨兵错误（`var ErrXxx = errors.New(...)`），Service 层传递，Handler 层用 `errors.As()` 区分处理
-- **日志**：使用 `log/slog` 标准库，不用 `fmt.Println`
-- **Context 传递**：所有数据访问方法第一个参数为 `context.Context`
-- **SQL 安全**：使用参数化查询（`$1`, `$2`），绝不拼接 SQL
-- **Redis Key 命名**：`{domain}:{sub}:{identifier}` 格式（如 `jwt:active:{uuid}:{jti}`）
+- **Error handling**: Repository layer defines sentinel errors (`var ErrXxx = errors.New(...)`), Service layer propagates, Handler layer uses `errors.As()` to branch
+- **Logging**: Use `log/slog` standard library, not `fmt.Println`
+- **Context propagation**: All data access methods take `context.Context` as first parameter
+- **SQL safety**: Always use parameterized queries (`$1`, `$2`), never concatenate SQL
+- **Redis key naming**: `{domain}:{sub}:{identifier}` format (e.g., `jwt:active:{uuid}:{jti}`)
 
-### 14.3 导入顺序
+### 14.3 Import Order
 
 ```go
 import (
-    // 1. 标准库
+    // 1. Standard library
     "context"
     "fmt"
 
-    // 2. 本项目包
+    // 2. Project packages
     "github.com/StellaShiina/ktauth/internal/model"
     "github.com/StellaShiina/ktauth/internal/repository"
 
-    // 3. 第三方库
+    // 3. Third-party
     "github.com/gin-gonic/gin"
     "github.com/redis/go-redis/v9"
 )
 ```
 
-## 15. 路线图
+## 15. Roadmap
 
-- [x] 实现SMTP邮箱验证码发送与注册验证
-- [ ] 优化session管理
-- [ ] 管理员web面板
+- [x] Implement SMTP email verification and registration
+- [ ] Optimize session management
+- [ ] Administrator web panel
 
 ---
 
-## 附录：快速参考卡片
+## Appendix: Quick Reference
 
-### 常用命令
+### Common Commands
 
 ```bash
-# 开发
-go run ./cmd/ktauth                          # 启动服务
-go test ./... -v                             # 运行所有测试
-docker compose -f docker-compose.db.yaml up -d  # 启动开发数据库
+# Development
+go run ./cmd/ktauth                                   # Start the service
+go test ./... -v                                      # Run all tests
+docker compose -f compose.db.yaml up -d        # Start dev databases
 
-# 构建
-go build -o ktauth ./cmd/ktauth              # 本地构建
-GOOS=linux GOARCH=amd64 go build -o ktauth ./cmd/ktauth  # 交叉编译
+# Build
+go build -o ktauth ./cmd/ktauth                       # Local build
+GOOS=linux GOARCH=amd64 go build -o ktauth ./cmd/ktauth  # Cross-compile
 
-# 部署
-docker compose up -d                         # 启动全栈
-docker compose logs -f ktauth                # 查看日志
-docker compose restart ktauth                # 重启服务
+# Deploy
+docker compose up -d                                  # Start full stack
+docker compose logs -f ktauth                         # View logs
+docker compose restart ktauth                         # Restart service
 ```
 
-### 默认端口
+### Default Ports
 
-| 服务 | 端口 |
-|------|------|
+| Service | Port |
+|---------|------|
 | KTAUTH API | 51214 |
 | PostgreSQL | 5432 |
 | Redis | 6379 |
 
-### 仓库信息
+### Repository Info
 
-- **模块路径**: `github.com/StellaShiina/ktauth`
-- **Docker 镜像**: `stellashiina/ktauth`
-- **安装脚本**: `https://ktauth.kaju.win`
+- **Module path**: `github.com/StellaShiina/ktauth`
+- **Docker image**: `stellashiina/ktauth`
+- **Install script**: `https://ktauth.kaju.win`
