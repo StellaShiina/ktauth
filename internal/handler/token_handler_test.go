@@ -70,10 +70,7 @@ func TestTokenHandlerReturnsServiceErrors(t *testing.T) {
 		wantReason logctx.Reason
 	}{
 		{call: h.Restock, want: http.StatusInternalServerError, wantReason: logctx.ReasonRestockTokensFailed},
-		// These three report a failure as HTTP 200, so the status-driven access
-		// log cannot see them and no reason is recorded. Pinned here so the
-		// blind spot stays deliberate rather than accidental.
-		{call: h.FlushTokens, want: http.StatusOK},
+		{call: h.FlushTokens, want: http.StatusInternalServerError, wantReason: logctx.ReasonFlushTokensFailed},
 		{call: h.GetToken, want: http.StatusOK},
 		{call: h.GetTokens, want: http.StatusOK},
 	}
