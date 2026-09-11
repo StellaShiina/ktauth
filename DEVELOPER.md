@@ -370,7 +370,7 @@ Abuse 检测使用 Redis INCR + EXPIRE 模式：
 | `ENABLE_RATELIMIT` | 空（启用） | 设为 `NO` 禁用限流 |
 | `ABUSELIMIT` | `100` | 触发自动封禁的 429 次数阈值 |
 | `ABUSEWINDOW` | `5` | Abuse 检测时间窗口（分钟） |
-| `LOGLEVEL` | `error` | 日志级别：`debug` / `info` / `warn` / `error` |
+| `LOGLEVEL` | `warn` | 日志级别：`debug` / `info` / `warn` / `error` |
 | `SMTP_HOST` | - | SMTP 服务器主机名 |
 | `SMTP_PORT` | `587` | SMTP Submission 端口 |
 | `SMTP_USERNAME` | - | SMTP 登录用户名；留空则不认证 |

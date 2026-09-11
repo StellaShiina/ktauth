@@ -30,24 +30,24 @@ func (r *IPRepo) AddIP(ctx context.Context, version int16, ipRange *net.IPNet, i
 		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == "23505" {
 			return ErrIPExist
 		}
-		slog.Error("IPRepo AddIP: " + err.Error())
+		slog.Error("IPRepo AddIP failed", "error", err)
 		return fmt.Errorf("IPRepo AddIP: %w", err)
 	}
-	slog.Debug("IPRepo AddIP success", "IPRange", ipRange.String())
+	slog.Debug("IPRepo AddIP success", "ipRange", ipRange.String())
 	return nil
 }
 
 func (r *IPRepo) DelIP(ctx context.Context, version int16, ipRange *net.IPNet) error {
 	res, err := r.pool.Exec(ctx, "DELETE FROM ip WHERE version = $1 AND ip_range = $2", version, ipRange)
 	if err != nil {
-		slog.Error("IPRepo DelIP: " + err.Error())
+		slog.Error("IPRepo DelIP failed", "error", err)
 		return err
 	}
 	rowsAffected := res.RowsAffected()
 	if rowsAffected == 0 {
 		return ErrIPNotFound
 	}
-	slog.Debug("IPRepo DelIP success", "IPRange", ipRange.String())
+	slog.Debug("IPRepo DelIP success", "ipRange", ipRange.String())
 	return nil
 }
 
@@ -89,20 +89,20 @@ func (r *IPRepo) GetIPs(ctx context.Context, version *int16, isWhiteList *bool) 
 	}
 
 	if err != nil {
-		slog.Error("GetIPs error: " + err.Error())
+		slog.Error("GetIPs query failed", "error", err)
 		return nil, fmt.Errorf("GetIPs error %w", err)
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var ip model.IP
 		if err := rows.Scan(&ip.ID, &ip.Version, &ip.IPRange, &ip.IsWhitelist, &ip.CreateAt, &ip.UpdateAt, &ip.Note); err != nil {
-			slog.Error("GetIPs error: " + err.Error())
+			slog.Error("GetIPs scan failed", "error", err)
 			return nil, fmt.Errorf("GetIPs error %w", err)
 		}
 		ips = append(ips, ip)
 	}
 	if err := rows.Err(); err != nil {
-		slog.Error("GetIPs error: " + err.Error())
+		slog.Error("GetIPs rows failed", "error", err)
 		return nil, fmt.Errorf("GetIPs error %w", err)
 	}
 	return ips, nil
@@ -123,7 +123,7 @@ func (r *IPRepo) UpdateIP(ctx context.Context, id int, isWhiteList bool, note *s
 		if err == pgx.ErrNoRows {
 			return ip, ErrIPNotFound
 		}
-		slog.Error("UpdateIP eeror: " + err.Error())
+		slog.Error("UpdateIP update failed", "error", err)
 		return ip, fmt.Errorf("Error when updating: %w", err)
 	}
 

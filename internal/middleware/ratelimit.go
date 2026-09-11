@@ -36,7 +36,7 @@ func (m *RateLimitMiddleware) RateLimit() gin.HandlerFunc {
 		allow, err := m.rateLimiter.Allow(c.Request.Context(), c.ClientIP())
 		if err != nil {
 			c.AbortWithStatus(http.StatusInternalServerError)
-			slog.Error(err.Error())
+			slog.Error("rate limit check failed", "error", err)
 			return
 		}
 		if !allow {
@@ -47,13 +47,13 @@ func (m *RateLimitMiddleware) RateLimit() gin.HandlerFunc {
 					note := "Abuse with too many 429. Host: " + c.Request.Host
 					cidr, err := m.ipRuleAdder.AddRule(c.Request.Context(), c.ClientIP(), false, &note)
 					if err != nil {
-						slog.Error("Add abuse IP to database failed", "error", err)
+						slog.Error("failed to add abuse ip to database", "error", err)
 					} else {
-						slog.Warn("Ban abuse IP", "IPRange", cidr)
+						slog.Warn("ban abuse ip", "ipRange", cidr)
 					}
 				}
 			} else {
-				slog.Error("Error when evaluating abuse", "error", err)
+				slog.Error("error when evaluating abuse", "error", err)
 			}
 			return
 		}

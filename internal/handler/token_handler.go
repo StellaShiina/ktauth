@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -25,6 +26,7 @@ func NewTokenHandler(s AdminTokenManager) *TokenHandler {
 func (h *TokenHandler) Restock(c *gin.Context) {
 	err := h.adminTokenManager.Restock(c.Request.Context())
 	if err != nil {
+		slog.Error("failed to restock tokens", "error", err)
 		c.String(http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -34,6 +36,7 @@ func (h *TokenHandler) Restock(c *gin.Context) {
 func (h *TokenHandler) FlushTokens(c *gin.Context) {
 	err := h.adminTokenManager.FlushTokens(c.Request.Context())
 	if err != nil {
+		slog.Error("failed to flush tokens", "error", err)
 		c.String(http.StatusOK, err.Error())
 		return
 	}
@@ -43,6 +46,7 @@ func (h *TokenHandler) FlushTokens(c *gin.Context) {
 func (h *TokenHandler) GetToken(c *gin.Context) {
 	token, err := h.adminTokenManager.GetToken(c.Request.Context())
 	if err != nil {
+		slog.Error("failed to get token", "error", err)
 		c.String(http.StatusOK, err.Error())
 		return
 	}
@@ -52,6 +56,7 @@ func (h *TokenHandler) GetToken(c *gin.Context) {
 func (h *TokenHandler) GetTokens(c *gin.Context) {
 	tokens, err := h.adminTokenManager.GetTokens(c.Request.Context())
 	if err != nil {
+		slog.Error("failed to get tokens", "error", err)
 		c.String(http.StatusOK, err.Error())
 		return
 	}

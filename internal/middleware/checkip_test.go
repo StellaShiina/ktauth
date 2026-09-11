@@ -33,11 +33,12 @@ func TestCheckIPMiddlewareACL(t *testing.T) {
 		status        int
 		wantNext      bool
 		wantWhitelist any
+		wantRule      string
 	}{
 		{name: "blacklist", rule: model.IPBlackList, level: 0, status: http.StatusForbidden},
-		{name: "greylist allowed", rule: model.IPGreyList, level: 0, status: http.StatusOK, wantNext: true, wantWhitelist: false},
+		{name: "greylist allowed", rule: model.IPGreyList, level: 0, status: http.StatusOK, wantNext: true, wantWhitelist: false, wantRule: "greylist"},
 		{name: "greylist denied", rule: model.IPGreyList, level: 1, status: http.StatusForbidden},
-		{name: "whitelist", rule: model.IPWhiteList, level: 1, status: http.StatusOK, wantNext: true, wantWhitelist: true},
+		{name: "whitelist", rule: model.IPWhiteList, level: 1, status: http.StatusOK, wantNext: true, wantWhitelist: true, wantRule: "whitelist"},
 	}
 
 	for _, tt := range tests {
@@ -45,11 +46,13 @@ func TestCheckIPMiddlewareACL(t *testing.T) {
 			mock := &ipRuleQuerierMock{rule: tt.rule}
 			nextCalls := 0
 			var whitelist any
+			var rule any
 			m := middleware.NewCheckIPMiddleware(mock)
 			engine := gin.New()
 			engine.GET("/", m.ACL(tt.level), func(c *gin.Context) {
 				nextCalls++
 				whitelist, _ = c.Get("whitelist")
+				rule, _ = c.Get("rule")
 				c.Status(http.StatusOK)
 			})
 			recorder := httptest.NewRecorder()
@@ -61,6 +64,9 @@ func TestCheckIPMiddlewareACL(t *testing.T) {
 			}
 			if tt.wantNext && whitelist != tt.wantWhitelist {
 				t.Fatalf("whitelist value = %#v, want %v", whitelist, tt.wantWhitelist)
+			}
+			if tt.wantNext && tt.wantRule != "" && rule != tt.wantRule {
+				t.Fatalf("rule value = %#v, want %v", rule, tt.wantRule)
 			}
 		})
 	}

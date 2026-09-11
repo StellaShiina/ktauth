@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"log/slog"
 	"net/http"
 	"os"
@@ -44,7 +43,7 @@ func main() {
 	case "error":
 		logLevel = slog.LevelError
 	default:
-		logLevel = slog.LevelError
+		logLevel = slog.LevelWarn
 	}
 
 	logger := slog.New(
@@ -54,18 +53,22 @@ func main() {
 	)
 	slog.SetDefault(logger)
 
+	// Route gin's internal output (debug prints, panic traces) through slog.
+	gin.DefaultWriter = middleware.NewSlogWriter(slog.LevelInfo)
+	gin.DefaultErrorWriter = middleware.NewSlogWriter(slog.LevelError)
+
 	// Configure rate limit
 	ratelimit, err := strconv.Atoi(os.Getenv("RATELIMIT"))
 	if err != nil {
-		slog.Warn("No available ratelimit conf, use default 60/min")
+		slog.Warn("no available ratelimit conf, use default 60/min")
 		ratelimit = 60
 	}
 
 	if os.Getenv("ENABLE_RATELIMIT") == "NO" {
-		slog.Warn("Ratelimit is inactive!")
+		slog.Warn("ratelimit is inactive")
 		enableRatelimit = false
 	} else {
-		slog.Info("Ratelimit is active.")
+		slog.Info("ratelimit is active")
 		enableRatelimit = true
 	}
 
@@ -86,17 +89,18 @@ func main() {
 	redis, err := db.NewRedis()
 
 	if err != nil {
-		slog.Error("Fail to connect to redis!", "err", err)
+		slog.Error("failed to connect to redis", "error", err)
 	} else {
-		slog.Info("Connected to redis!")
+		slog.Info("connected to redis")
 	}
 	defer redis.Close()
 
 	postgres, err := connectPostgres(30 * time.Second)
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("failed to connect to postgres", "error", err)
+		os.Exit(1)
 	} else {
-		slog.Info("Connected to postgres!")
+		slog.Info("connected to postgres")
 	}
 	defer postgres.Close()
 
@@ -134,24 +138,27 @@ func main() {
 	rateLimitMiddleware := middleware.NewRateLimitMiddleware(rateLimitService, adminIPRuleService)
 
 	if err := updateAdmin(accountService); err != nil {
-		slog.Error("Failed to update admin info")
+		slog.Error("failed to update admin info", "error", err)
 		panic(err)
 	}
 
-	r := gin.Default()
+	r := gin.New()
+	// AccessLog outermost: it must observe the status that Recovery writes
+	// on panics, and the abort statuses written by /kt middleware.
+	r.Use(middleware.AccessLog(), gin.Recovery())
 
 	trustedProxiesRaw := os.Getenv("TRUSTED_PROXIES")
 	if trustedProxiesRaw == "" {
 		trustedProxies = []string{"127.0.0.0/8", "::1/128"}
-		slog.Warn("No trustedproxies found, using default...", "trustedProxies", trustedProxies)
+		slog.Warn("no trusted proxies found, using default", "trustedProxies", trustedProxies)
 	} else {
 		trustedProxies = strings.Split(trustedProxiesRaw, ",")
-		slog.Info("Set TrustedProxies using .env", "trustedProxies", trustedProxies)
+		slog.Info("trusted proxies set from env", "trustedProxies", trustedProxies)
 	}
 
 	err = r.SetTrustedProxies(trustedProxies)
 	if err != nil {
-		slog.Error("Invalid TRUSTED_PROXIES settings!", "err", err)
+		slog.Error("invalid TRUSTED_PROXIES settings", "error", err)
 		panic(err)
 	}
 
@@ -166,7 +173,15 @@ func main() {
 	router.RegisterIPRouter(r, ipRuleHandler, checkIPMiddleware, authMiddleWare)
 	router.RegisterUserManageRouter(r, userManageHandler, checkIPMiddleware, authMiddleWare)
 
-	r.Run(":51214")
+	srv := &http.Server{
+		Addr:     ":51214",
+		Handler:  r,
+		ErrorLog: slog.NewLogLogger(slog.Default().Handler(), slog.LevelError),
+	}
+	slog.Info("listening on :51214")
+	if err := srv.ListenAndServe(); err != nil {
+		slog.Error("http server stopped", "error", err)
+	}
 }
 
 func connectPostgres(timeout time.Duration) (*pgxpool.Pool, error) {

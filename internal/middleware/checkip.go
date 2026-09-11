@@ -26,10 +26,12 @@ func (m *CheckIPMiddleware) ACL(level int) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		rule_type, err := m.ipQuerier.QueryRule(c, c.ClientIP())
 		if err != nil {
-			slog.Error(err.Error())
+			slog.Error("failed to query ip rule", "error", err, "clientIP", c.ClientIP())
 			c.AbortWithStatus(http.StatusInternalServerError)
 			return
 		}
+		// audit-log context only: lets the access log report which rule fired
+		c.Set("rule", string(rule_type))
 		switch rule_type {
 		case model.IPBlackList:
 			c.JSON(http.StatusForbidden, gin.H{
@@ -55,6 +57,7 @@ func (m *CheckIPMiddleware) ACL(level int) gin.HandlerFunc {
 			c.Next()
 			return
 		default:
+			slog.Error("unknown ip rule type", "rule", string(rule_type), "clientIP", c.ClientIP())
 			c.AbortWithStatus(http.StatusInternalServerError)
 		}
 	}
