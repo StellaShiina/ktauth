@@ -71,6 +71,7 @@ func (h *IPRuleHandler) AddRule(c *gin.Context) {
 			c.String(http.StatusBadRequest, err.Error())
 			return
 		} else {
+			slog.Error("failed to add ip rule", "error", err)
 			c.String(http.StatusInternalServerError, err.Error())
 			return
 		}
@@ -102,6 +103,7 @@ func (h *IPRuleHandler) ListRules(c *gin.Context) {
 	}
 	rules, err := h.ipRuleManager.ListRules(c.Request.Context(), version, isWhiteList)
 	if err != nil {
+		slog.Error("failed to list ip rules", "error", err)
 		c.String(http.StatusInternalServerError, "Server error...")
 		return
 	}
@@ -123,6 +125,7 @@ func (h *IPRuleHandler) DelRule(c *gin.Context) {
 			c.String(http.StatusBadRequest, err.Error())
 			return
 		}
+		slog.Error("failed to delete ip rule", "error", err)
 		c.String(http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -133,8 +136,8 @@ func (h *IPRuleHandler) DelRule(c *gin.Context) {
 func (h *UserManageHandler) ListUsers(c *gin.Context) {
 	users, err := h.userManager.ListUsers(c.Request.Context())
 	if err != nil {
+		slog.Error("failed to list users", "error", err)
 		c.String(http.StatusInternalServerError, "Server error...")
-		slog.Error("Error when listing users", "error", err.Error())
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"users": users})

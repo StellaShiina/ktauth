@@ -42,7 +42,7 @@ func NewEmailService(codeStore RegistrationCodeStore, cdStore CooldownStore, hos
 	}
 	from, err := mail.ParseAddress(fromStr)
 	if err != nil {
-		slog.Error("invalid SMTP from address")
+		slog.Error("invalid SMTP from address", "error", err)
 		return nil
 	}
 	return &EmailService{codeStore, cdStore, host, port, username, password, from}

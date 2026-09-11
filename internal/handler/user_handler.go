@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"net/http"
 
@@ -66,6 +65,7 @@ func NewUserHandler(sessionManager UserSessionManager, accountManager UserAccoun
 
 func (h *UserHandler) SendEmailCode(c *gin.Context) {
 	if h.codeManager == nil {
+		slog.Error("SMTP is not configured")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "SMTP is not configured"})
 		return
 	}
@@ -83,6 +83,7 @@ func (h *UserHandler) SendEmailCode(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
+		slog.Error("failed to send email code", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -91,6 +92,7 @@ func (h *UserHandler) SendEmailCode(c *gin.Context) {
 
 func (h *UserHandler) VerifyEmailCode(c *gin.Context) {
 	if h.codeManager == nil {
+		slog.Error("SMTP is not configured")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "SMTP is not configured"})
 		return
 	}
@@ -105,6 +107,7 @@ func (h *UserHandler) VerifyEmailCode(c *gin.Context) {
 	}
 	valid, err := h.codeManager.VerifyCode(c.Request.Context(), req.Email, req.Code)
 	if err != nil {
+		slog.Error("failed to verify email code", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -138,6 +141,7 @@ func (h *UserHandler) RegisterUser(c *gin.Context) {
 		}
 		valid, err := h.codeManager.VerifyCode(c.Request.Context(), *json.Email, *json.Code)
 		if err != nil {
+			slog.Error("failed to verify email code", "error", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
@@ -149,7 +153,7 @@ func (h *UserHandler) RegisterUser(c *gin.Context) {
 
 	uuid, err := h.accountManager.NewUser(c.Request.Context(), json.User, json.Password, json.Email, "user")
 	if err != nil {
-		fmt.Println("Register new user failed:", err)
+		slog.Error("failed to register new user", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create"})
 		return
 	}
@@ -167,7 +171,7 @@ func (h *UserHandler) LoginUser(c *gin.Context) {
 	user, err := h.accountManager.GetUserByName(c.Request.Context(), json.User)
 
 	if err != nil {
-		slog.Error(err.Error())
+		slog.Error("failed to get user by name", "error", err)
 		c.String(http.StatusUnauthorized, "Incorrect password or username...")
 		return
 	}
@@ -180,6 +184,7 @@ func (h *UserHandler) LoginUser(c *gin.Context) {
 	tokenStr, jti, err := auth.SignToken(user.UUID, user.Name, user.Role)
 
 	if err != nil {
+		slog.Error("failed to sign token", "error", err)
 		c.String(http.StatusInternalServerError, "Server error")
 		return
 	}
@@ -187,6 +192,7 @@ func (h *UserHandler) LoginUser(c *gin.Context) {
 	err = h.sessionManager.CreateSession(c.Request.Context(), user.UUID, jti)
 
 	if err != nil {
+		slog.Error("failed to create session", "error", err)
 		c.String(http.StatusInternalServerError, "Server error")
 		return
 	}
@@ -204,6 +210,7 @@ func (h *UserHandler) LogoutUser(c *gin.Context) {
 	uuid := c.GetString("uuid")
 	err := h.sessionManager.DelSession(c.Request.Context(), uuid, jti)
 	if err != nil {
+		slog.Error("failed to delete session", "error", err)
 		c.String(http.StatusInternalServerError, "Server error")
 		return
 	}

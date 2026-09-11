@@ -42,10 +42,10 @@ func (s *AdminIPRuleService) AddRule(c context.Context, ipStr string, isWhiteLis
 	err = s.store.AddIP(c, version, ipNet, isWhiteList, note)
 	if err == nil {
 		if err := s.cache.Delete(c, ipNet.String()); err != nil {
-			slog.Error("Failed to delete cached rule", "error", err)
+			slog.Error("failed to delete cached rule", "error", err)
 		}
 		if err := s.rlInv.Delete(c, ipNet.String()); err != nil {
-			slog.Error("Failed to delete ratelimit record", "error", err)
+			slog.Error("failed to delete ratelimit record", "error", err)
 		}
 	}
 	return ipNet.String(), err
@@ -81,10 +81,10 @@ func (s *AdminIPRuleService) DelRule(c context.Context, ipStr string) (string, e
 		return "", err
 	} else {
 		if err := s.cache.Delete(c, ipNet.String()); err != nil {
-			slog.Error("Failed to delete cached rule", "error", err)
+			slog.Error("failed to delete cached rule", "error", err)
 		}
 		if err := s.rlInv.Delete(c, ipNet.String()); err != nil {
-			slog.Error("Failed to delete ratelimit record", "error", err)
+			slog.Error("failed to delete ratelimit record", "error", err)
 		}
 	}
 	return ipNet.String(), s.store.DelIP(c, version, ipNet)

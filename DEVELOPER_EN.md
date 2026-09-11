@@ -369,7 +369,7 @@ Admin Operations:
 | `ENABLE_RATELIMIT` | (empty = enabled) | Set to `NO` to disable rate limiting |
 | `ABUSELIMIT` | `100` | 429 count threshold for auto-ban |
 | `ABUSEWINDOW` | `5` | Abuse detection window (minutes) |
-| `LOGLEVEL` | `error` | Log level: `debug` / `info` / `warn` / `error` |
+| `LOGLEVEL` | `warn` | Log level: `debug` / `info` / `warn` / `error` |
 | `SMTP_HOST` | - | SMTP server hostname |
 | `SMTP_PORT` | `587` | SMTP submission port |
 | `SMTP_USERNAME` | - | SMTP username; empty disables authentication |

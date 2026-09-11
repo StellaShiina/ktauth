@@ -42,7 +42,7 @@ func (s *IPAccessService) QueryRule(c context.Context, ipStr string) (model.IPRu
 	ruleStr, err := s.ipRuleCache.Get(c, ipNet.String())
 
 	if err != nil && err.Error() != "Cache not found" {
-		slog.Error("Redis error, fail to access cached rules")
+		slog.Error("failed to access cached rules", "error", err)
 	} else if err == nil {
 		slog.Debug("Cached rule", "ip", ipNet.String(), "rule", ruleStr)
 		return model.IPRuleType(ruleStr), nil
@@ -70,7 +70,7 @@ func (s *IPAccessService) QueryRule(c context.Context, ipStr string) (model.IPRu
 		}
 	}
 	if err != nil {
-		slog.Error(err.Error())
+		slog.Error("failed to cache ip rule", "error", err)
 	}
 	return rule_type, nil
 }
