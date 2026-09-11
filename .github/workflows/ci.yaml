@@ -7,8 +7,7 @@ on:
     tags:
     - "v*"
     paths-ignore:
-    - README.md
-    - README_zh-CN.md
+    - "*.md"
     - LICENSE
     - install.sh
     - worker/**
@@ -40,8 +39,8 @@ jobs:
             - 'internal/repository/**'
             - 'internal/integration/**'
             - 'sql/**'
-            - 'docker-compose.db.yaml'
-            - 'docker-compose.yaml'
+            - 'compose.db.yaml'
+            - 'compose.yaml'
             - '.env.example'
             - 'go.mod'
             - 'go.sum'
@@ -80,7 +79,7 @@ jobs:
         cache: true
 
     - name: Start database services
-      run: docker compose -f docker-compose.db.yaml up -d --wait
+      run: docker compose -f compose.db.yaml up -d --wait
 
     - name: Run integration tests
       run: |
@@ -91,7 +90,7 @@ jobs:
 
     - name: Stop database services
       if: always()
-      run: docker compose -f docker-compose.db.yaml down -v
+      run: docker compose -f compose.db.yaml down -v
 
   create-release:
     needs: [ go-test, integration-test ]
@@ -107,7 +106,7 @@ jobs:
     - name: Create Release Package
       run: |
         mkdir -p dist
-        zip -r dist/ktauth_${{ github.ref_name }}.zip docker-compose.yaml sql/00-init.sql .env.example
+        zip -r dist/ktauth_${{ github.ref_name }}.zip compose.yaml sql/00-init.sql .env.example
 
     - name: Create Release
       uses: softprops/action-gh-release@v2
