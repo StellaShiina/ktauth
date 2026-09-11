@@ -1,0 +1,74 @@
+name: build preview image
+
+on:
+  workflow_dispatch:
+
+
+jobs:
+  go-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .
+    steps:
+    - uses: actions/checkout@v5
+
+    - name: Set up Go
+      uses: actions/setup-go@v6
+      with:
+        go-version-file: go.mod
+        cache: true
+
+    - name: Run regular tests
+      run: go test ./...
+  integration-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .
+    steps:
+    - uses: actions/checkout@v5
+
+    - name: Set up Go
+      uses: actions/setup-go@v6
+      with:
+        go-version-file: go.mod
+        cache: true
+
+    - name: Start database services
+      run: docker compose -f compose.db.yaml up -d --wait
+
+    - name: Run integration tests
+      run: |
+        set -a
+        source .env.example
+        set +a
+        go test -tags=integration ./...
+
+    - name: Stop database services
+      if: always()
+      run: docker compose -f compose.db.yaml down -v
+
+  docker:
+    needs: [ go-test, integration-test ]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+    - uses: actions/checkout@v5
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    - name: Build and push
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        push: true
+        tags: ${{ secrets.DOCKERHUB_USERNAME }}/ktauth:test

@@ -4,9 +4,11 @@ import (
 	"context"
 	"io"
 	"log/slog"
+	"net/http"
 	"strings"
 	"time"
 
+	"github.com/StellaShiina/ktauth/internal/logctx"
 	"github.com/gin-gonic/gin"
 )
 
@@ -15,6 +17,8 @@ import (
 // c.Writer.Status() is safe to read after c.Next(): gin's responseWriter
 // defaults to 200 and every status-setting path updates it before the
 // handler chain returns.
+// The cause of the status is read from the audit-log context recorded by the
+// middleware or handler that produced it (internal/logctx).
 func AccessLog() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
@@ -55,8 +59,31 @@ func AccessLog() gin.HandlerFunc {
 		}
 
 		// ACL rule context (whitelist/blacklist/greylist) set by CheckIPMiddleware.
-		if rule := c.GetString("rule"); rule != "" {
+		if rule := c.GetString(logctx.KeyRule); rule != "" {
 			attrs = append(attrs, "rule", rule)
+		}
+
+		// Audit classification: the specific cause recorded by whichever
+		// middleware or handler produced this status. Sites that record none
+		// are reported as unattributed, which keeps the gaps greppable.
+		reason := logctx.ReasonOf(c)
+		if reason == "" {
+			reason = string(logctx.ReasonUnattributed)
+			if status == http.StatusNotFound {
+				// gin's serveError: no route matched this method and path.
+				// HandleMethodNotAllowed is off, so a method mismatch is a 404.
+				reason = string(logctx.ReasonRouteNotFound)
+			}
+		}
+		attrs = append(attrs, "reason", reason)
+
+		if detail := logctx.DetailOf(c); detail != "" {
+			attrs = append(attrs, "detail", detail)
+		}
+
+		// Authenticated actor, set by AuthMiddleWare once the session verifies.
+		if uuid := c.GetString("uuid"); uuid != "" {
+			attrs = append(attrs, "uuid", uuid)
 		}
 
 		if status >= 500 {

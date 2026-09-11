@@ -5,7 +5,7 @@ set -Eeuo pipefail
 PROJECT_NAME="ktauth"
 DOWNLOAD_URL="https://ktauth.kaju.win"
 DEPLOY_DIR="/opt/${PROJECT_NAME}"
-COMPOSE_FILE="${DEPLOY_DIR}/docker-compose.yaml"
+COMPOSE_FILE="${DEPLOY_DIR}/compose.yaml"
 ENV_FILE="${DEPLOY_DIR}/.env"
 IMAGE="stellashiina/ktauth:latest"
 
@@ -13,6 +13,7 @@ ADMIN_NAME="ktauth"
 ADMIN_PASSWD="ktauth"
 JWT_SECRET="ktauthsecret"
 ADDRESS="51214"
+TRUSTED_PROXIES="127.0.0.0/8,::1/128,172.16.0.0/12,192.168.0.0/16,10.0.0.0/8"
 
 if [[ -t 2 && -z "${NO_COLOR:-}" ]]; then
     RED=$'\033[0;31m'
@@ -153,7 +154,7 @@ require_docker() {
 }
 
 download_compose_file() {
-    download_file "${DOWNLOAD_URL}/docker-compose.yaml" "${COMPOSE_FILE}"
+    download_file "${DOWNLOAD_URL}/compose.yaml" "${COMPOSE_FILE}"
 }
 
 download_sql_init() {
@@ -204,6 +205,109 @@ valid_address() {
     ((10#${port} >= 1 && 10#${port} <= 65535))
 }
 
+# Rough validation of a comma-separated TRUSTED_PROXIES list: every element must
+# be an IPv4 or IPv6 address, optionally followed by /prefix. The value is handed
+# to gin's SetTrustedProxies verbatim, which rejects anything it cannot parse by
+# panicking at startup, so catching obvious mistakes here is enough. Like
+# valid_address, use this in a condition context only.
+valid_trusted_proxies() {
+    local value=$1
+    local elements
+    local element
+    local host
+    local prefix
+    local octets
+    local octet
+
+    [[ -n ${value} ]] || return 1
+
+    # read -a drops a trailing empty field, so the delimiter edges need their
+    # own check; an interior ",," still shows up as an empty element below.
+    case ${value} in
+        ,*|*,) return 1 ;;
+    esac
+
+    # read -a avoids pathname expansion, so a stray "*" cannot glob the cwd.
+    IFS=',' read -r -a elements <<<"${value}"
+
+    for element in "${elements[@]}"; do
+        case ${element} in
+            ''|*[[:space:]]*) return 1 ;;
+        esac
+
+        host=${element}
+        prefix=""
+        case ${element} in
+            */*)
+                host=${element%/*}
+                prefix=${element##*/}
+                case ${prefix} in
+                    ''|*[!0-9]*|????*) return 1 ;;
+                esac
+                ((10#${prefix} <= 128)) || return 1
+                ;;
+        esac
+
+        case ${host} in
+            *:*)
+                # IPv6: hex digits and colons, at most one "::" run.
+                case ${host} in
+                    *[!0-9a-fA-F:]*) return 1 ;;
+                    *:::*|*::*::*) return 1 ;;
+                    :*)
+                        case ${host} in
+                            ::*) ;;
+                            *) return 1 ;;
+                        esac
+                        ;;
+                    *:)
+                        case ${host} in
+                            *::) ;;
+                            *) return 1 ;;
+                        esac
+                        ;;
+                esac
+                ;;
+            *.*)
+                # IPv4: exactly four octets, each 0-255 without a leading zero.
+                case ${host} in
+                    *[!0-9.]*|.*|*.) return 1 ;;
+                esac
+                IFS='.' read -r -a octets <<<"${host}"
+                [[ ${#octets[@]} -eq 4 ]] || return 1
+                for octet in "${octets[@]}"; do
+                    case ${octet} in
+                        ''|*[!0-9]*|????*|0?*) return 1 ;;
+                    esac
+                    ((10#${octet} <= 255)) || return 1
+                done
+                ;;
+            *) return 1 ;;
+        esac
+    done
+
+    return 0
+}
+
+# Validation for the keys set_env can write. Unlisted keys are accepted as-is.
+valid_env_value() {
+    local key=$1
+    local value=$2
+
+    case "${key}" in
+        TRUSTED_PROXIES) valid_trusted_proxies "${value}" ;;
+        *) return 0 ;;
+    esac
+}
+
+env_hint() {
+    case "$1" in
+        TRUSTED_PROXIES)
+            log_info "Expected comma-separated IPv4/IPv6 addresses or CIDRs, for example: 127.0.0.0/8,::1/128"
+            ;;
+    esac
+}
+
 set_address() {
     local new_address
 
@@ -245,6 +349,10 @@ get_env() {
     if [[ -n ${value} ]]; then
         JWT_SECRET=${value}
     fi
+    value=$(read_env_value "TRUSTED_PROXIES")
+    if [[ -n ${value} ]]; then
+        TRUSTED_PROXIES=${value}
+    fi
 }
 
 write_env_value() {
@@ -281,25 +389,42 @@ set_env() {
         ADMIN_NAME) current=${ADMIN_NAME} ;;
         ADMIN_PASSWD) current=${ADMIN_PASSWD} ;;
         JWT_SECRET) current=${JWT_SECRET} ;;
+        TRUSTED_PROXIES) current=${TRUSTED_PROXIES} ;;
         *) die "Unsupported configuration key: ${key}" ;;
     esac
 
-    if [[ ${key} == "ADMIN_NAME" ]]; then
-        read -r -p "Set ${key} (press Enter to keep the current value): " new_value
-    else
-        read -r -s -p "Set ${key} (press Enter to keep the current value): " new_value
-        printf '\n' >&2
-    fi
-    new_value=${new_value:-${current}}
+    while true; do
+        if [[ ${key} == "ADMIN_NAME" || ${key} == "TRUSTED_PROXIES" ]]; then
+            read -r -p "Set ${key} (press Enter to keep the current value): " new_value
+        else
+            read -r -s -p "Set ${key} (press Enter to keep the current value): " new_value
+            printf '\n' >&2
+        fi
+
+        # Enter keeps the current value without validating it, so a value that
+        # predates this prompt can always be left alone.
+        if [[ -z ${new_value} ]]; then
+            new_value=${current}
+            break
+        fi
+        if valid_env_value "${key}" "${new_value}"; then
+            break
+        fi
+
+        log_warn "Invalid value for ${key}."
+        env_hint "${key}"
+    done
+
     write_env_value "${key}" "${new_value}"
 
     case "${key}" in
         ADMIN_NAME) ADMIN_NAME=${new_value} ;;
         ADMIN_PASSWD) ADMIN_PASSWD=${new_value} ;;
         JWT_SECRET) JWT_SECRET=${new_value} ;;
+        TRUSTED_PROXIES) TRUSTED_PROXIES=${new_value} ;;
     esac
 
-    if [[ ${key} == "ADMIN_NAME" ]]; then
+    if [[ ${key} == "ADMIN_NAME" || ${key} == "TRUSTED_PROXIES" ]]; then
         log_info "${key}: ${new_value}"
     else
         log_info "${key}: configured"
@@ -310,11 +435,13 @@ set_all_env() {
     set_env "ADMIN_NAME"
     set_env "ADMIN_PASSWD"
     set_env "JWT_SECRET"
+    set_env "TRUSTED_PROXIES"
 }
 
 log_config() {
     log_info "Current configuration"
     printf '  ADDRESS=%s\n' "${ADDRESS}" >&2
+    printf '  TRUSTED_PROXIES=%s\n' "${TRUSTED_PROXIES}" >&2
     printf '  ADMIN_NAME=%s\n' "${ADMIN_NAME}" >&2
     printf '  ADMIN_PASSWD=<configured>\n' >&2
     printf '  JWT_SECRET=<configured>\n' >&2
@@ -453,7 +580,7 @@ Usage: $0 <command>
 Commands:
   install     Install KTAUTH or repair an existing deployment
   update      Pull the latest image and restart the deployment
-  config      Update the listen address and core credentials
+  config      Update the listen address, core credentials and trusted proxies
   uninstall   Stop and uninstall the deployment"
 }
 

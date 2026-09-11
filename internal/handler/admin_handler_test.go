@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/StellaShiina/ktauth/internal/handler"
+	"github.com/StellaShiina/ktauth/internal/logctx"
 	"github.com/StellaShiina/ktauth/internal/repository"
 	"github.com/StellaShiina/ktauth/internal/service/admin"
 )
@@ -99,12 +100,14 @@ func TestIPRuleHandlerMapsErrors(t *testing.T) {
 	if recorder.Code != http.StatusBadRequest {
 		t.Fatalf("duplicate status = %d, want 400", recorder.Code)
 	}
+	wantAuditReason(t, c, logctx.ReasonIPRuleExists)
 
 	c, recorder = newUserHandlerContext(http.MethodDelete, "/ips", `{"ip":"192.0.2.1"}`)
 	h.DelRule(c)
 	if recorder.Code != http.StatusBadRequest {
 		t.Fatalf("missing rule status = %d, want 400", recorder.Code)
 	}
+	wantAuditReason(t, c, logctx.ReasonIPRuleNotFound)
 
 	manager = &ipRuleManagerMock{addErr: errors.New("database unavailable"), listErr: errors.New("database unavailable")}
 	h = handler.NewIPRuleHandler(manager)
@@ -113,11 +116,17 @@ func TestIPRuleHandlerMapsErrors(t *testing.T) {
 	if recorder.Code != http.StatusInternalServerError {
 		t.Fatalf("generic add status = %d, want 500", recorder.Code)
 	}
+	wantAuditReason(t, c, logctx.ReasonAddIPRuleFailed)
+	if detail := c.GetString(logctx.KeyDetail); detail != "database unavailable" {
+		t.Fatalf("add detail = %q, want %q", detail, "database unavailable")
+	}
+
 	c, recorder = newUserHandlerContext(http.MethodGet, "/ips", "")
 	h.ListRules(c)
 	if recorder.Code != http.StatusInternalServerError {
 		t.Fatalf("generic list status = %d, want 500", recorder.Code)
 	}
+	wantAuditReason(t, c, logctx.ReasonListIPRulesFailed)
 }
 
 func TestUserManageHandlerListUsers(t *testing.T) {
@@ -135,4 +144,5 @@ func TestUserManageHandlerListUsers(t *testing.T) {
 	if recorder.Code != http.StatusInternalServerError {
 		t.Fatalf("error status = %d, want 500", recorder.Code)
 	}
+	wantAuditReason(t, c, logctx.ReasonListUsersFailed)
 }

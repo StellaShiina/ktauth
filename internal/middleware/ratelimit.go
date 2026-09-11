@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/StellaShiina/ktauth/internal/logctx"
 	"github.com/gin-gonic/gin"
 )
 
@@ -35,11 +36,13 @@ func (m *RateLimitMiddleware) RateLimit() gin.HandlerFunc {
 		}
 		allow, err := m.rateLimiter.Allow(c.Request.Context(), c.ClientIP())
 		if err != nil {
+			logctx.SetReasonDetail(c, logctx.ReasonRateLimitUnavailable, err)
 			c.AbortWithStatus(http.StatusInternalServerError)
 			slog.Error("rate limit check failed", "error", err)
 			return
 		}
 		if !allow {
+			logctx.SetReason(c, logctx.ReasonRateLimitExceeded)
 			c.String(http.StatusTooManyRequests, "Rate limit exceed!")
 			c.Abort()
 			if abuse, err := m.rateLimiter.Abuse(c.Request.Context(), c.ClientIP()); err == nil {

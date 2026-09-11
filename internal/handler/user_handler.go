@@ -7,6 +7,7 @@ import (
 
 	"github.com/StellaShiina/ktauth/internal/auth"
 	"github.com/StellaShiina/ktauth/internal/crypto"
+	"github.com/StellaShiina/ktauth/internal/logctx"
 	"github.com/StellaShiina/ktauth/internal/model"
 	"github.com/gin-gonic/gin"
 )
@@ -66,24 +67,29 @@ func NewUserHandler(sessionManager UserSessionManager, accountManager UserAccoun
 func (h *UserHandler) SendEmailCode(c *gin.Context) {
 	if h.codeManager == nil {
 		slog.Error("SMTP is not configured")
+		logctx.SetReason(c, logctx.ReasonSMTPNotConfigured)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "SMTP is not configured"})
 		return
 	}
 	var req emailCode
 	if err := c.ShouldBindJSON(&req); err != nil {
+		logctx.SetReasonDetail(c, logctx.ReasonInvalidBody, err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	if err := h.codeManager.SendCode(c.Request.Context(), req.Email); err != nil {
 		switch err.Error() {
 		case "verification code recently sent":
+			logctx.SetReasonDetail(c, logctx.ReasonCodeRecentlySent, err)
 			c.JSON(http.StatusTooManyRequests, gin.H{"error": err.Error()})
 			return
 		case "invalid email address":
+			logctx.SetReasonDetail(c, logctx.ReasonInvalidEmail, err)
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 		slog.Error("failed to send email code", "error", err)
+		logctx.SetReasonDetail(c, logctx.ReasonSendCodeFailed, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -93,25 +99,30 @@ func (h *UserHandler) SendEmailCode(c *gin.Context) {
 func (h *UserHandler) VerifyEmailCode(c *gin.Context) {
 	if h.codeManager == nil {
 		slog.Error("SMTP is not configured")
+		logctx.SetReason(c, logctx.ReasonSMTPNotConfigured)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "SMTP is not configured"})
 		return
 	}
 	var req emailCode
 	if err := c.ShouldBindJSON(&req); err != nil {
+		logctx.SetReasonDetail(c, logctx.ReasonInvalidBody, err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	if req.Code == "" {
+		logctx.SetReason(c, logctx.ReasonCodeRequired)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "code is required"})
 		return
 	}
 	valid, err := h.codeManager.VerifyCode(c.Request.Context(), req.Email, req.Code)
 	if err != nil {
 		slog.Error("failed to verify email code", "error", err)
+		logctx.SetReasonDetail(c, logctx.ReasonVerifyCodeFailed, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	if !valid {
+		logctx.SetReason(c, logctx.ReasonInvalidCode)
 		c.JSON(http.StatusBadRequest, gin.H{"valid": false})
 		return
 	}
@@ -121,31 +132,37 @@ func (h *UserHandler) VerifyEmailCode(c *gin.Context) {
 func (h *UserHandler) RegisterUser(c *gin.Context) {
 	var json register
 	if err := c.ShouldBindJSON(&json); err != nil {
+		logctx.SetReasonDetail(c, logctx.ReasonInvalidBody, err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if json.Token != nil && *json.Token != "" {
 		if !h.tokenConsumer.Consume(c.Request.Context(), *json.Token) {
+			logctx.SetReason(c, logctx.ReasonInvalidInviteToken)
 			c.JSON(http.StatusUnauthorized, gin.H{"status": "unauthorized"})
 			return
 		}
 	} else {
 		if json.Email == nil || *json.Email == "" || json.Code == nil || *json.Code == "" {
+			logctx.SetReason(c, logctx.ReasonMissingCredentials)
 			c.JSON(http.StatusBadRequest, gin.H{"error": "token or email and code are required"})
 			return
 		}
 		if h.codeManager == nil {
+			logctx.SetReason(c, logctx.ReasonSMTPNotConfigured)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "SMTP is not configured"})
 			return
 		}
 		valid, err := h.codeManager.VerifyCode(c.Request.Context(), *json.Email, *json.Code)
 		if err != nil {
 			slog.Error("failed to verify email code", "error", err)
+			logctx.SetReasonDetail(c, logctx.ReasonVerifyCodeFailed, err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 		if !valid {
+			logctx.SetReason(c, logctx.ReasonInvalidEmailCode)
 			c.JSON(http.StatusUnauthorized, gin.H{"status": "unauthorized"})
 			return
 		}
@@ -154,6 +171,7 @@ func (h *UserHandler) RegisterUser(c *gin.Context) {
 	uuid, err := h.accountManager.NewUser(c.Request.Context(), json.User, json.Password, json.Email, "user")
 	if err != nil {
 		slog.Error("failed to register new user", "error", err)
+		logctx.SetReasonDetail(c, logctx.ReasonCreateUserFailed, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create"})
 		return
 	}
@@ -164,6 +182,7 @@ func (h *UserHandler) RegisterUser(c *gin.Context) {
 func (h *UserHandler) LoginUser(c *gin.Context) {
 	var json login
 	if err := c.ShouldBindJSON(&json); err != nil {
+		logctx.SetReasonDetail(c, logctx.ReasonInvalidBody, err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -172,11 +191,13 @@ func (h *UserHandler) LoginUser(c *gin.Context) {
 
 	if err != nil {
 		slog.Error("failed to get user by name", "error", err)
+		logctx.SetReasonDetail(c, logctx.ReasonUserLookupFailed, err)
 		c.String(http.StatusUnauthorized, "Incorrect password or username...")
 		return
 	}
 
 	if !crypto.VerifyPassword(user.PasswordHash, json.Password) {
+		logctx.SetReason(c, logctx.ReasonInvalidCredentials)
 		c.String(http.StatusUnauthorized, "Incorrect password or username...")
 		return
 	}
@@ -185,6 +206,7 @@ func (h *UserHandler) LoginUser(c *gin.Context) {
 
 	if err != nil {
 		slog.Error("failed to sign token", "error", err)
+		logctx.SetReasonDetail(c, logctx.ReasonSignTokenFailed, err)
 		c.String(http.StatusInternalServerError, "Server error")
 		return
 	}
@@ -193,6 +215,7 @@ func (h *UserHandler) LoginUser(c *gin.Context) {
 
 	if err != nil {
 		slog.Error("failed to create session", "error", err)
+		logctx.SetReasonDetail(c, logctx.ReasonCreateSessionFailed, err)
 		c.String(http.StatusInternalServerError, "Server error")
 		return
 	}
@@ -211,6 +234,7 @@ func (h *UserHandler) LogoutUser(c *gin.Context) {
 	err := h.sessionManager.DelSession(c.Request.Context(), uuid, jti)
 	if err != nil {
 		slog.Error("failed to delete session", "error", err)
+		logctx.SetReasonDetail(c, logctx.ReasonDeleteSessionFailed, err)
 		c.String(http.StatusInternalServerError, "Server error")
 		return
 	}

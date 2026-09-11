@@ -10,6 +10,7 @@ import (
 
 	"github.com/StellaShiina/ktauth/internal/crypto"
 	"github.com/StellaShiina/ktauth/internal/handler"
+	"github.com/StellaShiina/ktauth/internal/logctx"
 	"github.com/StellaShiina/ktauth/internal/model"
 	"github.com/gin-gonic/gin"
 )
@@ -97,6 +98,14 @@ func newUserHandlerContext(method, target, body string) (*gin.Context, *httptest
 	return context, recorder
 }
 
+// wantAuditReason asserts the cause the handler recorded for the access log.
+func wantAuditReason(t *testing.T, c *gin.Context, want logctx.Reason) {
+	t.Helper()
+	if got := c.GetString(logctx.KeyReason); got != string(want) {
+		t.Fatalf("audit reason = %q, want %q", got, want)
+	}
+}
+
 func TestUserHandlerRegisterWithToken(t *testing.T) {
 	account := &accountManagerMock{newUUID: "new-user"}
 	token := &tokenConsumerMock{valid: true}
@@ -124,6 +133,7 @@ func TestUserHandlerRegisterRejectsInvalidToken(t *testing.T) {
 	if recorder.Code != http.StatusUnauthorized || account.newCalls != 0 {
 		t.Fatalf("status/account calls = %d/%d, want 401/0", recorder.Code, account.newCalls)
 	}
+	wantAuditReason(t, c, logctx.ReasonInvalidInviteToken)
 }
 
 func TestUserHandlerRegisterWithEmailCode(t *testing.T) {
@@ -163,6 +173,7 @@ func TestUserHandlerEmailConfigurationAndValidationErrors(t *testing.T) {
 	if recorder.Code != http.StatusInternalServerError {
 		t.Fatalf("SendEmailCode status = %d, want 500", recorder.Code)
 	}
+	wantAuditReason(t, c, logctx.ReasonSMTPNotConfigured)
 
 	email := &emailManagerMock{err: errors.New("verification code recently sent")}
 	h = handler.NewUserHandler(&sessionManagerMock{}, &accountManagerMock{}, &tokenConsumerMock{}, email)
@@ -171,11 +182,52 @@ func TestUserHandlerEmailConfigurationAndValidationErrors(t *testing.T) {
 	if recorder.Code != http.StatusTooManyRequests {
 		t.Fatalf("SendEmailCode status = %d, want 429", recorder.Code)
 	}
+	wantAuditReason(t, c, logctx.ReasonCodeRecentlySent)
 
 	c, recorder = newUserHandlerContext(http.MethodPost, "/verify-code", `{"email":"alice@example.com"}`)
 	h.VerifyEmailCode(c)
 	if recorder.Code != http.StatusBadRequest {
 		t.Fatalf("VerifyEmailCode status = %d, want 400", recorder.Code)
+	}
+	wantAuditReason(t, c, logctx.ReasonCodeRequired)
+}
+
+// TestHandlerRecordsAuditDetail checks that a rejected request carries the
+// underlying error text, which is what makes an audit line self-contained.
+func TestHandlerRecordsAuditDetail(t *testing.T) {
+	h := handler.NewUserHandler(&sessionManagerMock{}, &accountManagerMock{}, &tokenConsumerMock{})
+	c, recorder := newUserHandlerContext(http.MethodPost, "/login", `{`)
+	h.LoginUser(c)
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("login status = %d, want 400", recorder.Code)
+	}
+	wantAuditReason(t, c, logctx.ReasonInvalidBody)
+	if detail := c.GetString(logctx.KeyDetail); detail == "" {
+		t.Fatal("login bind failure recorded no detail")
+	}
+
+	admin := handler.NewIPRuleHandler(&ipRuleManagerMock{})
+	c, recorder = newUserHandlerContext(http.MethodPost, "/ips/new", `{`)
+	admin.AddRule(c)
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("add rule status = %d, want 400", recorder.Code)
+	}
+	wantAuditReason(t, c, logctx.ReasonInvalidBody)
+	if detail := c.GetString(logctx.KeyDetail); detail == "" {
+		t.Fatal("add rule bind failure recorded no detail")
+	}
+
+	c, recorder = newUserHandlerContext(http.MethodGet, "/logout", "")
+	c.Set("uuid", "u1")
+	c.Set("jti", "jti-1")
+	h = handler.NewUserHandler(&sessionManagerMock{err: errors.New("redis unavailable")}, &accountManagerMock{}, &tokenConsumerMock{})
+	h.LogoutUser(c)
+	if recorder.Code != http.StatusInternalServerError {
+		t.Fatalf("logout status = %d, want 500", recorder.Code)
+	}
+	wantAuditReason(t, c, logctx.ReasonDeleteSessionFailed)
+	if detail := c.GetString(logctx.KeyDetail); detail != "redis unavailable" {
+		t.Fatalf("logout detail = %q, want %q", detail, "redis unavailable")
 	}
 }
 
@@ -221,4 +273,5 @@ func TestUserHandlerLoginRejectsWrongPassword(t *testing.T) {
 	if recorder.Code != http.StatusUnauthorized || session.createCalls != 0 {
 		t.Fatalf("status/session calls = %d/%d, want 401/0", recorder.Code, session.createCalls)
 	}
+	wantAuditReason(t, c, logctx.ReasonInvalidCredentials)
 }
