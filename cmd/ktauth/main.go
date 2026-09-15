@@ -18,6 +18,7 @@ import (
 	"github.com/StellaShiina/ktauth/internal/service/access"
 	"github.com/StellaShiina/ktauth/internal/service/admin"
 	"github.com/StellaShiina/ktauth/internal/service/identity"
+	"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -143,6 +144,8 @@ func main() {
 	}
 
 	r := gin.New()
+	pprofRoute := r.Group("/debug/pprof", checkIPMiddleware.ACL(1))
+	pprof.Register(pprofRoute, "")
 	// AccessLog outermost: it must observe the status that Recovery writes
 	// on panics, and the abort statuses written by /kt middleware.
 	r.Use(middleware.AccessLog(), gin.Recovery())
